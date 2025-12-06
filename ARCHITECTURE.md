@@ -50,7 +50,7 @@ Lala Panel is a lightweight hosting control panel built with simplicity and effi
 ┌─────────────────────────────────────────────────────────┐
 │              System Components                           │
 ├─────────────────────────────────────────────────────────┤
-│  Nginx:           FrankenPHP:        Let's Encrypt:      │
+│  Nginx:           PHP-FPM:          Let's Encrypt:      │
 │  • Web server     • PHP runtime      • SSL certs         │
 │  • Reverse proxy  • Multi-version    • Auto-renewal      │
 │  • SSL handling   • FastCGI          • Domain validation │
@@ -231,12 +231,10 @@ Database
 └── sites-enabled/
     └── example.com -> ../sites-available/example.com
 
-/opt/frankenphp/
-├── php8.3/
-│   ├── frankenphp           # Binary
-│   └── frankenphp.sock      # Unix socket
-├── php8.2/
-└── php8.1/
+/run/php/
+├── php8.3-fpm.sock          # PHP 8.3 socket
+├── php8.2-fpm.sock          # PHP 8.2 socket
+└── php8.1-fpm.sock          # PHP 8.1 socket
 
 /opt/lalapanel/
 ├── app.py                   # Main application
@@ -327,24 +325,24 @@ server {
     add_header X-Frame-Options "SAMEORIGIN" always;
     add_header X-Content-Type-Options "nosniff" always;
     
-    # PHP via FrankenPHP
+    # PHP via PHP-FPM
     location ~ \.php$ {
-        fastcgi_pass unix:/opt/frankenphp/php8.3/frankenphp.sock;
+        fastcgi_pass unix:/run/php/php8.3-fpm.sock;
         include fastcgi_params;
     }
 }
 ```
 
-## FrankenPHP Integration
+## PHP-FPM Integration
 
 ### Multi-Version Support
 
-Each PHP version runs as a separate service:
+Each PHP version runs as a separate PHP-FPM service:
 
 ```
-FrankenPHP 8.3 → Socket: /opt/frankenphp/php8.3/frankenphp.sock
-FrankenPHP 8.2 → Socket: /opt/frankenphp/php8.2/frankenphp.sock
-FrankenPHP 8.1 → Socket: /opt/frankenphp/php8.1/frankenphp.sock
+PHP-FPM 8.3 → Socket: /run/php/php8.3-fpm.sock
+PHP-FPM 8.2 → Socket: /run/php/php8.2-fpm.sock
+PHP-FPM 8.1 → Socket: /run/php/php8.1-fpm.sock
 ```
 
 ### Version Switching
@@ -352,7 +350,7 @@ FrankenPHP 8.1 → Socket: /opt/frankenphp/php8.1/frankenphp.sock
 Site's Nginx config points to specific socket:
 
 ```nginx
-fastcgi_pass unix:/opt/frankenphp/php8.3/frankenphp.sock;
+fastcgi_pass unix:/run/php/php8.3-fpm.sock;
 ```
 
 Switching versions = Update config + Reload Nginx
@@ -404,7 +402,7 @@ except SpecificException as e:
 
 2. **System**
    - Nginx status
-   - FrankenPHP processes
+   - PHP-FPM processes
    - Disk usage
    - Memory usage
 
@@ -440,7 +438,7 @@ WantedBy=multi-user.target
 2. Network ready
 3. MariaDB starts
 4. Nginx starts
-5. FrankenPHP services start
+5. PHP-FPM services start
 6. Lala Panel starts
 7. Ready for requests
 
@@ -452,7 +450,7 @@ WantedBy=multi-user.target
 | Database (Panel) | SQLite | Metadata storage |
 | Database (Sites) | MariaDB | Site databases |
 | Web Server | Nginx | HTTP/HTTPS serving |
-| PHP Runtime | FrankenPHP | PHP execution |
+| PHP Runtime | PHP-FPM | PHP execution |
 | SSL | Let's Encrypt | Certificate management |
 | Auth | Flask-Login | User sessions |
 | Frontend | HTML5/CSS3/JS | User interface |

@@ -25,7 +25,7 @@ class SiteManager:
         self.log_dir = self._get_config_value('LOG_DIR')
         self.nginx_available = self._get_config_value('NGINX_SITES_AVAILABLE')
         self.nginx_enabled = self._get_config_value('NGINX_SITES_ENABLED')
-        self.frankenphp_dir = self._get_config_value('FRANKENPHP_DIR')
+        self.php_fpm_socket_dir = self._get_config_value('PHP_FPM_SOCKET_DIR')
     
     def create_site_directories(self, domain):
         """Create directories for a new site"""
@@ -88,7 +88,7 @@ class SiteManager:
         <p>Your site <strong>{domain}</strong> is now active</p>
         <div class="info">
             <strong>PHP Version:</strong> <?php echo PHP_VERSION; ?><br>
-            <strong>Server:</strong> Nginx + FrankenPHP<br>
+            <strong>Server:</strong> Nginx + PHP-FPM<br>
             <strong>Powered by:</strong> Lala Panel
         </div>
     </div>
@@ -108,8 +108,8 @@ class SiteManager:
         log_path = os.path.join(self.log_dir, domain)
         config_path = os.path.join(self.nginx_available, domain)
         
-        # FrankenPHP socket path
-        frankenphp_socket = f"{self.frankenphp_dir}/php{php_version}/frankenphp.sock"
+        # PHP-FPM socket path
+        php_fpm_socket = f"{self.php_fpm_socket_dir}/php{php_version}-fpm.sock"
         
         # Build config
         config = f"""# Nginx configuration for {domain}
@@ -130,10 +130,10 @@ server {{
     add_header X-Content-Type-Options "nosniff" always;
     add_header X-XSS-Protection "1; mode=block" always;
     
-    # PHP handling via FrankenPHP
+    # PHP handling via PHP-FPM
     location ~ \\.php$ {{
         try_files $uri =404;
-        fastcgi_pass unix:{frankenphp_socket};
+        fastcgi_pass unix:{php_fpm_socket};
         fastcgi_index index.php;
         fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
         include fastcgi_params;
@@ -188,10 +188,10 @@ server {{
     add_header X-Content-Type-Options "nosniff" always;
     add_header X-XSS-Protection "1; mode=block" always;
     
-    # PHP handling via FrankenPHP
+    # PHP handling via PHP-FPM
     location ~ \\.php$ {{
         try_files $uri =404;
-        fastcgi_pass unix:{frankenphp_socket};
+        fastcgi_pass unix:{php_fpm_socket};
         fastcgi_index index.php;
         fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
         include fastcgi_params;

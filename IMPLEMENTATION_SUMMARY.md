@@ -11,7 +11,7 @@ Lala Panel is a complete, production-ready lightweight hosting control panel for
 #### 1. OS & Stack
 - ✅ Ubuntu (Latest LTS) support
 - ✅ Nginx web server integration
-- ✅ FrankenPHP runtime with version switching (8.3, 8.2, 8.1)
+- ✅ PHP-FPM runtime with version switching (8.3, 8.2, 8.1)
 - ✅ MariaDB database backend
 - ✅ Let's Encrypt SSL automation
 
@@ -19,7 +19,7 @@ Lala Panel is a complete, production-ready lightweight hosting control panel for
 - ✅ Create and delete websites
 - ✅ Nginx Virtual Host configuration per site
 - ✅ SSL via Let's Encrypt per site
-- ✅ Selectable PHP version (FrankenPHP)
+- ✅ Selectable PHP version (PHP-FPM)
 - ✅ Optional MariaDB database creation
 - ✅ User-friendly web UI (simple, fast, minimal)
 - ✅ Proper file structure:
@@ -27,9 +27,9 @@ Lala Panel is a complete, production-ready lightweight hosting control panel for
   - `/var/log/lalapanel/<site>` for logs
   - `/etc/lalapanel/` for configs
 
-#### 3. FrankenPHP Requirements
-- ✅ Support for multiple FrankenPHP builds
-- ✅ Structured directory (/opt/frankenphp/phpX.X/)
+#### 3. PHP-FPM Requirements
+- ✅ Support for multiple PHP-FPM versions
+- ✅ Standard socket paths (/run/php/phpX.X-fpm.sock)
 - ✅ Hot-switching PHP version per site
 - ✅ Automatic Nginx reload after config changes
 
@@ -62,7 +62,7 @@ Lala Panel is a complete, production-ready lightweight hosting control panel for
 - ✅ Modular, extendable, cleanly structured
 - ✅ No external CDNs for UI assets
 - ✅ Uses standard Ubuntu packages where possible
-- ✅ Custom builds only for FrankenPHP (as required)
+- ✅ Custom builds only for PHP-FPM (as required)
 
 ## Deliverables
 
@@ -112,7 +112,7 @@ Lala Panel is a complete, production-ready lightweight hosting control panel for
 
 3. **CONFIGURATION.md** (7,508 bytes)
    - Environment variables
-   - FrankenPHP configuration
+   - PHP-FPM configuration
    - Nginx optimization
    - MariaDB setup
    - Security hardening
@@ -144,7 +144,7 @@ Lala Panel is a complete, production-ready lightweight hosting control panel for
 - **Database (Panel):** SQLite 3
 - **Database (Sites):** MariaDB 10+
 - **Web Server:** Nginx
-- **PHP Runtime:** FrankenPHP
+- **PHP Runtime:** PHP-FPM
 - **SSL:** Let's Encrypt (Certbot)
 - **Template Engine:** Jinja2
 - **Password Hashing:** Werkzeug Security
@@ -240,7 +240,7 @@ Detailed manual installation steps provided in README.md
 - Support for PHP 8.3, 8.2, 8.1
 - Hot-swap without site downtime
 - Automatic Nginx reload
-- FrankenPHP socket-based communication
+- PHP-FPM socket-based communication
 
 ## Code Quality
 
@@ -328,10 +328,10 @@ lalapanel/
    - Set Let's Encrypt email
    - Configure firewall
 
-3. **Install FrankenPHP**
-   - Download binaries for each PHP version
-   - Create systemd services
-   - Start services
+3. **Install PHP-FPM** (automatic via install.sh)
+   - PHP-FPM installed for each PHP version
+   - Services enabled and started
+   - Ready to process PHP requests
 
 4. **Start Lala Panel**
    ```bash

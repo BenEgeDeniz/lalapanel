@@ -45,50 +45,34 @@ MARIADB_ROOT_PASSWORD=your_secure_mariadb_password
 LETSENCRYPT_EMAIL=your_email@example.com
 ```
 
-### 4. Install FrankenPHP
+### 4. Install PHP-FPM
 
-FrankenPHP must be installed manually for each PHP version:
-
-```bash
-# Create directory for PHP 8.3
-sudo mkdir -p /opt/frankenphp/php8.3
-cd /opt/frankenphp/php8.3
-
-# Download FrankenPHP (adjust URL for your system)
-sudo wget https://github.com/dunglas/frankenphp/releases/latest/download/frankenphp-linux-x86_64
-sudo chmod +x frankenphp-linux-x86_64
-sudo mv frankenphp-linux-x86_64 frankenphp
-```
-
-Create systemd service for FrankenPHP:
+PHP-FPM is installed automatically by the install.sh script. For manual installation:
 
 ```bash
-sudo nano /etc/systemd/system/frankenphp-8.3.service
-```
+# Add ondrej/php PPA for multiple PHP versions
+sudo add-apt-repository -y ppa:ondrej/php
+sudo apt-get update
 
-Add:
-```ini
-[Unit]
-Description=FrankenPHP PHP 8.3
-After=network.target
-
-[Service]
-Type=simple
-User=www-data
-WorkingDirectory=/opt/frankenphp/php8.3
-ExecStart=/opt/frankenphp/php8.3/frankenphp php-server --listen unix:/opt/frankenphp/php8.3/frankenphp.sock
-Restart=always
-RestartSec=10
-
-[Install]
-WantedBy=multi-user.target
+# Install PHP-FPM for each version (example for PHP 8.3)
+sudo apt-get install -y \
+    php8.3-fpm \
+    php8.3-cli \
+    php8.3-common \
+    php8.3-mysql \
+    php8.3-xml \
+    php8.3-curl \
+    php8.3-gd \
+    php8.3-mbstring \
+    php8.3-zip \
+    php8.3-bcmath \
+    php8.3-intl
 ```
 
 Enable and start:
 ```bash
-sudo systemctl daemon-reload
-sudo systemctl enable frankenphp-8.3
-sudo systemctl start frankenphp-8.3
+sudo systemctl enable php8.3-fpm
+sudo systemctl start php8.3-fpm
 ```
 
 Repeat for PHP 8.2 and 8.1 if needed.
@@ -199,14 +183,14 @@ ls -la /var/log/lalapanel
 
 ### Site Shows 502 Error
 ```bash
-# Check FrankenPHP is running
-sudo systemctl status frankenphp-8.3
+# Check PHP-FPM is running
+sudo systemctl status php8.3-fpm
 
 # Check socket exists
-ls -la /opt/frankenphp/php8.3/frankenphp.sock
+ls -la /run/php/php8.3-fpm.sock
 
-# Restart FrankenPHP
-sudo systemctl restart frankenphp-8.3
+# Restart PHP-FPM
+sudo systemctl restart php8.3-fpm
 ```
 
 ### SSL Certificate Failed
