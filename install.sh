@@ -97,9 +97,9 @@ password=
 EOF
     chmod 600 "$TEMP_MYCNF_INIT"
     
-    # Set root password using config file
+    # Set root password using SQL only (avoid mysqladmin to prevent command line exposure)
     mysql --defaults-extra-file="$TEMP_MYCNF_INIT" -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '${MARIADB_ROOT_PASSWORD}';" 2>/dev/null || \
-        mysqladmin --defaults-extra-file="$TEMP_MYCNF_INIT" password "${MARIADB_ROOT_PASSWORD}"
+        mysql --defaults-extra-file="$TEMP_MYCNF_INIT" -e "SET PASSWORD FOR 'root'@'localhost' = PASSWORD('${MARIADB_ROOT_PASSWORD}');"
     rm -f "$TEMP_MYCNF_INIT"
     
     # Create temporary MySQL config file for secure authentication
