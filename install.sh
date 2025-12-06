@@ -81,16 +81,26 @@ install_system_packages() {
 setup_mariadb() {
     print_info "Setting up MariaDB..."
     
-    # Generate random root password
-    MARIADB_ROOT_PASSWORD=$(openssl rand -base64 32 | tr -dc 'a-zA-Z0-9' | head -c 24)
+    # Generate random root password with better entropy
+    MARIADB_ROOT_PASSWORD=$(openssl rand -hex 20)
     
     # Start MariaDB
     systemctl start mariadb
     systemctl enable mariadb
     
-    # Set root password
-    mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '${MARIADB_ROOT_PASSWORD}';" 2>/dev/null || \
-        mysqladmin -u root password "${MARIADB_ROOT_PASSWORD}"
+    # Create temporary MySQL config file for initial password setting
+    TEMP_MYCNF_INIT=$(mktemp)
+    cat > "$TEMP_MYCNF_INIT" << EOF
+[client]
+user=root
+password=
+EOF
+    chmod 600 "$TEMP_MYCNF_INIT"
+    
+    # Set root password using config file
+    mysql --defaults-extra-file="$TEMP_MYCNF_INIT" -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '${MARIADB_ROOT_PASSWORD}';" 2>/dev/null || \
+        mysqladmin --defaults-extra-file="$TEMP_MYCNF_INIT" password "${MARIADB_ROOT_PASSWORD}"
+    rm -f "$TEMP_MYCNF_INIT"
     
     # Create temporary MySQL config file for secure authentication
     TEMP_MYCNF=$(mktemp)
@@ -257,13 +267,22 @@ EOF
 collect_configuration() {
     print_info "Collecting configuration..."
     
-    # Prompt for Let's Encrypt email
-    read -p "Enter email for Let's Encrypt SSL certificates: " LETSENCRYPT_EMAIL
-    
-    if [ -z "$LETSENCRYPT_EMAIL" ]; then
-        print_warning "No email provided. Using default: admin@localhost"
-        LETSENCRYPT_EMAIL="admin@localhost"
-    fi
+    # Prompt for Let's Encrypt email with validation
+    while true; do
+        read -p "Enter email for Let's Encrypt SSL certificates: " LETSENCRYPT_EMAIL
+        
+        if [ -z "$LETSENCRYPT_EMAIL" ]; then
+            print_error "Email is required for Let's Encrypt SSL certificates"
+            continue
+        fi
+        
+        # Basic email validation
+        if echo "$LETSENCRYPT_EMAIL" | grep -qE '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'; then
+            break
+        else
+            print_error "Invalid email format. Please enter a valid email address"
+        fi
+    done
     
     print_info "Configuration collected"
 }
