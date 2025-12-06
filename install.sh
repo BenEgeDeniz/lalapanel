@@ -167,7 +167,7 @@ setup_nginx() {
     mkdir -p /etc/nginx/sites-enabled
     
     # Stop nginx if it's running to avoid conflicts during configuration
-    systemctl stop nginx 2>/dev/null || true
+    systemctl is-active nginx >/dev/null 2>&1 && systemctl stop nginx || true
     
     # Remove default site
     rm -f /etc/nginx/sites-enabled/default
