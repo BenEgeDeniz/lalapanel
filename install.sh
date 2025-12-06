@@ -81,16 +81,45 @@ install_system_packages() {
 setup_mariadb() {
     print_info "Setting up MariaDB..."
     
+    # Generate random root password with better entropy
+    MARIADB_ROOT_PASSWORD=$(openssl rand -hex 20)
+    
     # Start MariaDB
     systemctl start mariadb
     systemctl enable mariadb
     
+    # Create temporary MySQL config file for initial password setting
+    TEMP_MYCNF_INIT=$(mktemp)
+    cat > "$TEMP_MYCNF_INIT" << EOF
+[client]
+user=root
+password=
+EOF
+    chmod 600 "$TEMP_MYCNF_INIT"
+    
+    # Set root password using SQL only (avoid mysqladmin to prevent command line exposure)
+    mysql --defaults-extra-file="$TEMP_MYCNF_INIT" -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '${MARIADB_ROOT_PASSWORD}';" 2>/dev/null || \
+        mysql --defaults-extra-file="$TEMP_MYCNF_INIT" -e "SET PASSWORD FOR 'root'@'localhost' = PASSWORD('${MARIADB_ROOT_PASSWORD}');"
+    rm -f "$TEMP_MYCNF_INIT"
+    
+    # Create temporary MySQL config file for secure authentication
+    TEMP_MYCNF=$(mktemp)
+    cat > "$TEMP_MYCNF" << EOF
+[client]
+user=root
+password=${MARIADB_ROOT_PASSWORD}
+EOF
+    chmod 600 "$TEMP_MYCNF"
+    
     # Secure installation (basic)
-    mysql -e "DELETE FROM mysql.user WHERE User='';"
-    mysql -e "DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');"
-    mysql -e "DROP DATABASE IF EXISTS test;"
-    mysql -e "DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';"
-    mysql -e "FLUSH PRIVILEGES;"
+    mysql --defaults-extra-file="$TEMP_MYCNF" -e "DELETE FROM mysql.user WHERE User='';" 2>/dev/null || true
+    mysql --defaults-extra-file="$TEMP_MYCNF" -e "DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');" 2>/dev/null || true
+    mysql --defaults-extra-file="$TEMP_MYCNF" -e "DROP DATABASE IF EXISTS test;" 2>/dev/null || true
+    mysql --defaults-extra-file="$TEMP_MYCNF" -e "DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';" 2>/dev/null || true
+    mysql --defaults-extra-file="$TEMP_MYCNF" -e "FLUSH PRIVILEGES;" 2>/dev/null || true
+    
+    # Clean up temporary config file
+    rm -f "$TEMP_MYCNF"
     
     print_info "MariaDB setup complete"
 }
@@ -235,6 +264,55 @@ EOF
     deactivate
 }
 
+collect_configuration() {
+    print_info "Collecting configuration..."
+    
+    # Prompt for Let's Encrypt email with validation
+    while true; do
+        read -p "Enter email for Let's Encrypt SSL certificates: " LETSENCRYPT_EMAIL
+        
+        if [ -z "$LETSENCRYPT_EMAIL" ]; then
+            print_error "Email is required for Let's Encrypt SSL certificates"
+            continue
+        fi
+        
+        # Basic email validation
+        if echo "$LETSENCRYPT_EMAIL" | grep -qE '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'; then
+            break
+        else
+            print_error "Invalid email format. Please enter a valid email address"
+        fi
+    done
+    
+    print_info "Configuration collected"
+}
+
+create_env_file() {
+    print_info "Creating environment configuration file..."
+    
+    # Create environment file
+    cat > /etc/lalapanel/lalapanel.env << EOF
+# Lala Panel Environment Configuration
+# Generated on $(date)
+
+# MariaDB Configuration
+MARIADB_ROOT_PASSWORD=${MARIADB_ROOT_PASSWORD}
+
+# Let's Encrypt Configuration
+LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}
+
+# Panel Configuration
+CONFIG_DIR=/etc/lalapanel
+SITES_DIR=/var/www
+LOG_DIR=/var/log/lalapanel
+EOF
+    
+    # Set proper permissions
+    chmod 600 /etc/lalapanel/lalapanel.env
+    
+    print_info "Environment file created at /etc/lalapanel/lalapanel.env"
+}
+
 create_systemd_service() {
     print_info "Creating systemd service..."
     
@@ -248,6 +326,7 @@ Type=simple
 User=root
 WorkingDirectory=$INSTALL_DIR
 Environment="PATH=$INSTALL_DIR/venv/bin"
+EnvironmentFile=/etc/lalapanel/lalapanel.env
 ExecStart=$INSTALL_DIR/venv/bin/python app.py
 Restart=always
 RestartSec=10
@@ -281,13 +360,15 @@ show_completion_message() {
     echo
     echo "Admin credentials:"
     echo "  Username: $ADMIN_USER"
-    echo "  Password: [your password]"
     echo
     echo "Important notes:"
     echo "  - Configure firewall to allow port 8080"
     echo "  - PHP-FPM is installed and running for PHP 8.1, 8.2, and 8.3"
-    echo "  - Set MARIADB_ROOT_PASSWORD environment variable"
-    echo "  - Set LETSENCRYPT_EMAIL environment variable"
+    echo "  - All credentials (MariaDB root password, Let's Encrypt email)"
+    echo "    are securely stored in /etc/lalapanel/lalapanel.env"
+    echo "  - Keep this file secure and backed up!"
+    echo "  - The MariaDB root password can be retrieved with:"
+    echo "    sudo grep MARIADB_ROOT_PASSWORD /etc/lalapanel/lalapanel.env"
     echo
     echo "================================================================"
 }
@@ -300,12 +381,15 @@ main() {
     check_root
     check_ubuntu
     
+    collect_configuration
+    
     install_system_packages
     setup_mariadb
     install_php_fpm
     setup_nginx
     install_lalapanel
     create_admin_user
+    create_env_file
     create_systemd_service
     
     show_completion_message

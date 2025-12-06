@@ -234,12 +234,12 @@ server {{
             os.symlink(available_path, enabled_path)
         
         # Test nginx config
-        result = subprocess.run(['nginx', '-t'], capture_output=True, text=True)
+        result = subprocess.run(['/usr/sbin/nginx', '-t'], capture_output=True, text=True)
         if result.returncode != 0:
             raise Exception(f"Nginx config test failed: {result.stderr}")
         
         # Reload nginx
-        subprocess.run(['systemctl', 'reload', 'nginx'], check=True)
+        subprocess.run(['/usr/bin/systemctl', 'reload', 'nginx'], check=True)
     
     def disable_site(self, domain):
         """Disable a site by removing symlink"""
@@ -249,7 +249,7 @@ server {{
             os.unlink(enabled_path)
         
         # Reload nginx
-        subprocess.run(['systemctl', 'reload', 'nginx'], check=True)
+        subprocess.run(['/usr/bin/systemctl', 'reload', 'nginx'], check=True)
     
     def delete_site_files(self, domain):
         """Delete all files for a site"""
@@ -272,7 +272,7 @@ server {{
         """Request SSL certificate from Let's Encrypt"""
         letsencrypt_email = self._get_config_value('LETSENCRYPT_EMAIL')
         result = subprocess.run([
-            'certbot', 'certonly',
+            '/usr/bin/certbot', 'certonly',
             '--non-interactive',
             '--agree-tos',
             '--email', letsencrypt_email,
@@ -302,7 +302,7 @@ server {{
         self.create_nginx_config(domain, new_php_version, ssl_enabled)
         
         # Reload nginx
-        subprocess.run(['systemctl', 'reload', 'nginx'], check=True)
+        subprocess.run(['/usr/bin/systemctl', 'reload', 'nginx'], check=True)
 
 
 class DatabaseManager:
