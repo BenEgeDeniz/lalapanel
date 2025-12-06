@@ -166,6 +166,9 @@ setup_nginx() {
     mkdir -p /etc/nginx/sites-available
     mkdir -p /etc/nginx/sites-enabled
     
+    # Stop nginx if it's running to avoid conflicts during configuration
+    systemctl is-active nginx >/dev/null 2>&1 && systemctl stop nginx || true
+    
     # Remove default site
     rm -f /etc/nginx/sites-enabled/default
     
@@ -221,8 +224,8 @@ EOF
     # Test nginx configuration
     nginx -t
     
-    # Reload nginx
-    systemctl reload nginx
+    # Start and enable nginx with the new configuration
+    systemctl start nginx
     systemctl enable nginx
     
     print_info "Nginx configured"
