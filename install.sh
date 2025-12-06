@@ -162,13 +162,12 @@ install_php_fpm() {
 setup_nginx() {
     print_info "Configuring Nginx..."
     
-    # Start and enable nginx to ensure configuration files are properly initialized
-    systemctl start nginx
-    systemctl enable nginx
-    
     # Ensure nginx directories exist
     mkdir -p /etc/nginx/sites-available
     mkdir -p /etc/nginx/sites-enabled
+    
+    # Stop nginx if it's running to avoid conflicts during configuration
+    systemctl stop nginx 2>/dev/null || true
     
     # Remove default site
     rm -f /etc/nginx/sites-enabled/default
@@ -225,8 +224,9 @@ EOF
     # Test nginx configuration
     nginx -t
     
-    # Reload nginx to apply new configuration
-    systemctl reload nginx
+    # Start and enable nginx with the new configuration
+    systemctl start nginx
+    systemctl enable nginx
     
     print_info "Nginx configured"
 }
