@@ -81,18 +81,26 @@ install_system_packages() {
 setup_mariadb() {
     print_info "Setting up MariaDB..."
     
+    # Generate random root password
+    MARIADB_ROOT_PASSWORD=$(openssl rand -base64 32 | tr -dc 'a-zA-Z0-9' | head -c 24)
+    
     # Start MariaDB
     systemctl start mariadb
     systemctl enable mariadb
     
+    # Set root password
+    mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '${MARIADB_ROOT_PASSWORD}';" 2>/dev/null || \
+        mysqladmin -u root password "${MARIADB_ROOT_PASSWORD}"
+    
     # Secure installation (basic)
-    mysql -e "DELETE FROM mysql.user WHERE User='';"
-    mysql -e "DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');"
-    mysql -e "DROP DATABASE IF EXISTS test;"
-    mysql -e "DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';"
-    mysql -e "FLUSH PRIVILEGES;"
+    mysql -u root -p"${MARIADB_ROOT_PASSWORD}" -e "DELETE FROM mysql.user WHERE User='';" 2>/dev/null || true
+    mysql -u root -p"${MARIADB_ROOT_PASSWORD}" -e "DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');" 2>/dev/null || true
+    mysql -u root -p"${MARIADB_ROOT_PASSWORD}" -e "DROP DATABASE IF EXISTS test;" 2>/dev/null || true
+    mysql -u root -p"${MARIADB_ROOT_PASSWORD}" -e "DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';" 2>/dev/null || true
+    mysql -u root -p"${MARIADB_ROOT_PASSWORD}" -e "FLUSH PRIVILEGES;" 2>/dev/null || true
     
     print_info "MariaDB setup complete"
+    print_info "MariaDB root password: ${MARIADB_ROOT_PASSWORD}"
 }
 
 install_php_fpm() {
@@ -235,6 +243,46 @@ EOF
     deactivate
 }
 
+collect_configuration() {
+    print_info "Collecting configuration..."
+    
+    # Prompt for Let's Encrypt email
+    read -p "Enter email for Let's Encrypt SSL certificates: " LETSENCRYPT_EMAIL
+    
+    if [ -z "$LETSENCRYPT_EMAIL" ]; then
+        print_warning "No email provided. Using default: admin@localhost"
+        LETSENCRYPT_EMAIL="admin@localhost"
+    fi
+    
+    print_info "Configuration collected"
+}
+
+create_env_file() {
+    print_info "Creating environment configuration file..."
+    
+    # Create environment file
+    cat > /etc/lalapanel/lalapanel.env << EOF
+# Lala Panel Environment Configuration
+# Generated on $(date)
+
+# MariaDB Configuration
+MARIADB_ROOT_PASSWORD=${MARIADB_ROOT_PASSWORD}
+
+# Let's Encrypt Configuration
+LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL}
+
+# Panel Configuration
+CONFIG_DIR=/etc/lalapanel
+SITES_DIR=/var/www
+LOG_DIR=/var/log/lalapanel
+EOF
+    
+    # Set proper permissions
+    chmod 600 /etc/lalapanel/lalapanel.env
+    
+    print_info "Environment file created at /etc/lalapanel/lalapanel.env"
+}
+
 create_systemd_service() {
     print_info "Creating systemd service..."
     
@@ -248,6 +296,7 @@ Type=simple
 User=root
 WorkingDirectory=$INSTALL_DIR
 Environment="PATH=$INSTALL_DIR/venv/bin"
+EnvironmentFile=/etc/lalapanel/lalapanel.env
 ExecStart=$INSTALL_DIR/venv/bin/python app.py
 Restart=always
 RestartSec=10
@@ -283,11 +332,17 @@ show_completion_message() {
     echo "  Username: $ADMIN_USER"
     echo "  Password: [your password]"
     echo
+    echo "MariaDB root password:"
+    echo "  $MARIADB_ROOT_PASSWORD"
+    echo
+    echo "Let's Encrypt email:"
+    echo "  $LETSENCRYPT_EMAIL"
+    echo
     echo "Important notes:"
     echo "  - Configure firewall to allow port 8080"
     echo "  - PHP-FPM is installed and running for PHP 8.1, 8.2, and 8.3"
-    echo "  - Set MARIADB_ROOT_PASSWORD environment variable"
-    echo "  - Set LETSENCRYPT_EMAIL environment variable"
+    echo "  - All credentials are stored in /etc/lalapanel/lalapanel.env"
+    echo "  - Keep this file secure and backed up!"
     echo
     echo "================================================================"
 }
@@ -300,12 +355,15 @@ main() {
     check_root
     check_ubuntu
     
+    collect_configuration
+    
     install_system_packages
     setup_mariadb
     install_php_fpm
     setup_nginx
     install_lalapanel
     create_admin_user
+    create_env_file
     create_systemd_service
     
     show_completion_message
