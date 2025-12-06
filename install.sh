@@ -162,6 +162,10 @@ install_php_fpm() {
 setup_nginx() {
     print_info "Configuring Nginx..."
     
+    # Ensure nginx directories exist
+    mkdir -p /etc/nginx/sites-available
+    mkdir -p /etc/nginx/sites-enabled
+    
     # Remove default site
     rm -f /etc/nginx/sites-enabled/default
     
