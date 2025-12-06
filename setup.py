@@ -147,7 +147,6 @@ def check_directories():
         '/var/www': 'Sites directory',
         '/var/log/lalapanel': 'Logs directory',
         '/etc/lalapanel': 'Configuration directory',
-        '/opt/frankenphp': 'FrankenPHP directory',
     }
     
     for directory, description in directories.items():
@@ -166,7 +165,7 @@ def show_next_steps():
     print("Setup completed successfully!")
     print("=" * 45)
     print("\nNext steps:")
-    print("1. Install and configure FrankenPHP for each PHP version")
+    print("1. Install and configure PHP-FPM for each PHP version")
     print("2. Configure Nginx and ensure it's running")
     print("3. Start the panel service:")
     print("   sudo systemctl start lalapanel")

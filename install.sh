@@ -5,7 +5,7 @@
 # 
 # This script installs Lala Panel on Ubuntu with:
 # - Nginx
-# - FrankenPHP (multiple versions)
+# - PHP-FPM (multiple versions)
 # - MariaDB
 # - Let's Encrypt (certbot)
 ###############################################################################
@@ -23,7 +23,6 @@ INSTALL_DIR="/opt/lalapanel"
 CONFIG_DIR="/etc/lalapanel"
 LOG_DIR="/var/log/lalapanel"
 SITES_DIR="/var/www"
-FRANKENPHP_DIR="/opt/frankenphp"
 
 # Functions
 print_info() {
@@ -96,31 +95,37 @@ setup_mariadb() {
     print_info "MariaDB setup complete"
 }
 
-install_frankenphp() {
-    print_info "Installing FrankenPHP..."
+install_php_fpm() {
+    print_info "Installing PHP-FPM..."
     
-    mkdir -p "$FRANKENPHP_DIR"
+    # Add ondrej/php PPA for multiple PHP versions
+    add-apt-repository -y ppa:ondrej/php
+    apt-get update -qq
     
-    # Install FrankenPHP for different PHP versions
-    # Note: In production, you would download actual FrankenPHP binaries
-    # For now, we create placeholder directories
-    
+    # Install PHP-FPM for different PHP versions
     for version in 8.3 8.2 8.1; do
-        VERSION_DIR="$FRANKENPHP_DIR/php$version"
-        mkdir -p "$VERSION_DIR"
+        print_info "Installing PHP $version and PHP-FPM..."
         
-        print_info "Setting up FrankenPHP PHP $version (placeholder)..."
+        apt-get install -y \
+            php${version}-fpm \
+            php${version}-cli \
+            php${version}-common \
+            php${version}-mysql \
+            php${version}-xml \
+            php${version}-curl \
+            php${version}-gd \
+            php${version}-mbstring \
+            php${version}-zip \
+            php${version}-bcmath \
+            php${version}-intl \
+            php${version}-soap \
+            php${version}-readline
         
-        # Create socket directory
-        mkdir -p "$VERSION_DIR"
+        # Enable and start PHP-FPM service
+        systemctl enable php${version}-fpm
+        systemctl start php${version}-fpm
         
-        # In production, you would:
-        # 1. Download FrankenPHP binary for specific PHP version
-        # 2. Create systemd service for FrankenPHP
-        # 3. Configure FrankenPHP to listen on Unix socket
-        
-        print_warning "FrankenPHP PHP $version placeholder created"
-        print_warning "You need to manually install FrankenPHP binaries and configure systemd services"
+        print_info "PHP $version and PHP-FPM installed successfully"
     done
 }
 
@@ -280,7 +285,7 @@ show_completion_message() {
     echo
     echo "Important notes:"
     echo "  - Configure firewall to allow port 8080"
-    echo "  - FrankenPHP binaries need to be installed manually"
+    echo "  - PHP-FPM is installed and running for PHP 8.1, 8.2, and 8.3"
     echo "  - Set MARIADB_ROOT_PASSWORD environment variable"
     echo "  - Set LETSENCRYPT_EMAIL environment variable"
     echo
@@ -297,7 +302,7 @@ main() {
     
     install_system_packages
     setup_mariadb
-    install_frankenphp
+    install_php_fpm
     setup_nginx
     install_lalapanel
     create_admin_user

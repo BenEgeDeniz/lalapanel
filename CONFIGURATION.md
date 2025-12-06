@@ -22,47 +22,60 @@ PANEL_PORT=8080
 PANEL_HOST=0.0.0.0
 ```
 
-## FrankenPHP Configuration
+## PHP-FPM Configuration
 
-### Installing FrankenPHP
+### Installing PHP-FPM
 
-For each PHP version, download and install FrankenPHP:
+For each PHP version, install PHP-FPM and required extensions:
 
 ```bash
-# Create directory for PHP 8.3
-mkdir -p /opt/frankenphp/php8.3
-cd /opt/frankenphp/php8.3
+# Add ondrej/php PPA
+add-apt-repository -y ppa:ondrej/php
+apt-get update
 
-# Download FrankenPHP
-wget https://github.com/dunglas/frankenphp/releases/latest/download/frankenphp-linux-x86_64
-chmod +x frankenphp-linux-x86_64
-mv frankenphp-linux-x86_64 frankenphp
-
-# Create systemd service
-cat > /etc/systemd/system/frankenphp-8.3.service << 'EOF'
-[Unit]
-Description=FrankenPHP PHP 8.3
-After=network.target
-
-[Service]
-Type=simple
-User=www-data
-WorkingDirectory=/opt/frankenphp/php8.3
-ExecStart=/opt/frankenphp/php8.3/frankenphp php-server --listen unix:/opt/frankenphp/php8.3/frankenphp.sock
-Restart=always
-RestartSec=10
-
-[Install]
-WantedBy=multi-user.target
-EOF
+# Install PHP 8.3 and PHP-FPM
+apt-get install -y \
+    php8.3-fpm \
+    php8.3-cli \
+    php8.3-common \
+    php8.3-mysql \
+    php8.3-xml \
+    php8.3-curl \
+    php8.3-gd \
+    php8.3-mbstring \
+    php8.3-zip \
+    php8.3-bcmath \
+    php8.3-intl \
+    php8.3-soap \
+    php8.3-readline
 
 # Enable and start service
-systemctl daemon-reload
-systemctl enable frankenphp-8.3
-systemctl start frankenphp-8.3
+systemctl enable php8.3-fpm
+systemctl start php8.3-fpm
 ```
 
 Repeat for PHP 8.2 and 8.1.
+
+### PHP-FPM Pool Configuration
+
+Edit `/etc/php/8.3/fpm/pool.d/www.conf` for each version:
+
+```ini
+[www]
+user = www-data
+group = www-data
+listen = /run/php/php8.3-fpm.sock
+listen.owner = www-data
+listen.group = www-data
+listen.mode = 0660
+
+pm = dynamic
+pm.max_children = 50
+pm.start_servers = 5
+pm.min_spare_servers = 5
+pm.max_spare_servers = 35
+pm.max_requests = 500
+```
 
 ## Nginx Configuration
 
@@ -338,9 +351,18 @@ events {
 proxy_cache_path /var/cache/nginx levels=1:2 keys_zone=cache:10m max_size=1g;
 ```
 
-### PHP/FrankenPHP Optimization
+### PHP-FPM Optimization
 
-Configure FrankenPHP with appropriate memory limits and workers based on your server resources.
+Configure PHP-FPM with appropriate memory limits and process managers based on your server resources.
+
+Edit `/etc/php/8.3/fpm/php.ini`:
+
+```ini
+memory_limit = 256M
+max_execution_time = 300
+upload_max_filesize = 100M
+post_max_size = 100M
+```
 
 ### MariaDB Optimization
 
@@ -376,14 +398,14 @@ journalctl -u lalapanel -n 100 --no-pager
 
 **Solution:**
 ```bash
-# Check FrankenPHP is running
-systemctl status frankenphp-8.3
+# Check PHP-FPM is running
+systemctl status php8.3-fpm
 
 # Check socket exists
-ls -la /opt/frankenphp/php8.3/frankenphp.sock
+ls -la /run/php/php8.3-fpm.sock
 
-# Restart FrankenPHP
-systemctl restart frankenphp-8.3
+# Restart PHP-FPM
+systemctl restart php8.3-fpm
 ```
 
 ### Issue: SSL certificate failed

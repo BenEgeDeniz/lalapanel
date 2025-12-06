@@ -23,8 +23,8 @@ class Config:
     NGINX_SITES_AVAILABLE = '/etc/nginx/sites-available'
     NGINX_SITES_ENABLED = '/etc/nginx/sites-enabled'
     
-    # FrankenPHP
-    FRANKENPHP_DIR = '/opt/frankenphp'
+    # PHP-FPM
+    PHP_FPM_SOCKET_DIR = '/run/php'
     AVAILABLE_PHP_VERSIONS = ['8.3', '8.2', '8.1']
     
     # Database

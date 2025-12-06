@@ -5,7 +5,7 @@ A minimal, lightweight hosting control panel designed specifically for PHP-based
 ## Features
 
 - **Simple Site Management**: Create and delete websites with ease
-- **FrankenPHP Support**: Multiple PHP version support with hot-switching capability
+- **PHP-FPM Support**: Multiple PHP version support with hot-switching capability
 - **SSL Automation**: Automatic Let's Encrypt certificate generation and renewal
 - **MariaDB Integration**: Built-in database management
 - **Clean UI**: Minimalist, fast web interface
@@ -15,7 +15,7 @@ A minimal, lightweight hosting control panel designed specifically for PHP-based
 
 - **OS**: Ubuntu (Latest LTS)
 - **Web Server**: Nginx
-- **PHP Runtime**: FrankenPHP (with version switching)
+- **PHP Runtime**: PHP-FPM (with version switching)
 - **Database**: MariaDB
 - **SSL**: Let's Encrypt (certbot)
 - **Backend**: Python 3 + Flask
@@ -38,10 +38,10 @@ A minimal, lightweight hosting control panel designed specifically for PHP-based
 /etc/nginx/sites-available/ # Nginx configs
 /etc/nginx/sites-enabled/   # Enabled sites
 
-/opt/frankenphp/           # FrankenPHP installations
-  ├── php8.3/
-  ├── php8.2/
-  └── php8.1/
+/run/php/                  # PHP-FPM sockets
+  ├── php8.3-fpm.sock
+  ├── php8.2-fpm.sock
+  └── php8.1-fpm.sock
 
 /opt/lalapanel/            # Panel application
 ```
@@ -67,7 +67,7 @@ sudo bash install.sh
 
 The installation script will:
 1. Install Nginx, MariaDB, certbot, and system dependencies
-2. Set up FrankenPHP directory structure
+2. Install PHP-FPM for PHP 8.1, 8.2, and 8.3
 3. Install Lala Panel application
 4. Create systemd service
 5. Prompt for admin credentials
@@ -82,7 +82,7 @@ sudo apt-get update
 sudo apt-get install -y nginx mariadb-server certbot python3 python3-pip python3-venv
 
 # Create directories
-sudo mkdir -p /opt/lalapanel /etc/lalapanel /var/log/lalapanel /var/www /opt/frankenphp
+sudo mkdir -p /opt/lalapanel /etc/lalapanel /var/log/lalapanel /var/www
 
 # Copy application files
 sudo cp -r . /opt/lalapanel/
@@ -120,21 +120,31 @@ MARIADB_ROOT_PASSWORD=your_mariadb_root_password
 LETSENCRYPT_EMAIL=your_email@example.com
 ```
 
-### FrankenPHP Setup
+### PHP-FPM Setup
 
-FrankenPHP binaries need to be installed manually for each PHP version:
+PHP-FPM is automatically installed by the install.sh script. For manual setup:
 
 ```bash
-# Example for PHP 8.3
-mkdir -p /opt/frankenphp/php8.3
-cd /opt/frankenphp/php8.3
+# Add ondrej/php PPA for multiple PHP versions
+sudo add-apt-repository -y ppa:ondrej/php
+sudo apt-get update
 
-# Download FrankenPHP (adjust URL for your architecture)
-wget https://github.com/dunglas/frankenphp/releases/download/v1.0.0/frankenphp-linux-x86_64.tar.gz
-tar -xzf frankenphp-linux-x86_64.tar.gz
-
-# Create systemd service for FrankenPHP
-# (Service file configuration depends on FrankenPHP version)
+# Install PHP-FPM for each version
+for version in 8.3 8.2 8.1; do
+    sudo apt-get install -y \
+        php${version}-fpm \
+        php${version}-cli \
+        php${version}-common \
+        php${version}-mysql \
+        php${version}-xml \
+        php${version}-curl \
+        php${version}-gd \
+        php${version}-mbstring \
+        php${version}-zip
+    
+    sudo systemctl enable php${version}-fpm
+    sudo systemctl start php${version}-fpm
+done
 ```
 
 ## Usage
@@ -353,7 +363,7 @@ For issues, questions, or suggestions, please open an issue on GitHub.
 ## Acknowledgments
 
 - Built with Flask
-- Uses FrankenPHP for PHP runtime
+- Uses PHP-FPM for PHP runtime
 - SSL by Let's Encrypt
 - Nginx for web serving
 - MariaDB for database management
