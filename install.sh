@@ -68,6 +68,7 @@ install_system_packages() {
         nginx \
         mariadb-server \
         certbot \
+        ssl-cert \
         python3 \
         python3-pip \
         python3-venv \
