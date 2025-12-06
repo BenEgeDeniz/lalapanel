@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}Create Site - Lala Panel{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Create New Site</h1>
+    <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">← Back to Dashboard</a>
+</div>
+
+<div class="form-container">
+    <form method="POST" action="{{ url_for('create_site') }}" class="site-form">
+        <div class="form-group">
+            <label for="domain">Domain Name *</label>
+            <input type="text" id="domain" name="domain" class="form-control" 
+                   placeholder="example.com" required>
+            <small class="form-text">Enter the domain name without http:// or https://</small>
+        </div>
+        
+        <div class="form-group">
+            <label for="php_version">PHP Version *</label>
+            <select id="php_version" name="php_version" class="form-control" required>
+                {% for version in php_versions %}
+                <option value="{{ version }}">PHP {{ version }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label class="checkbox-label">
+                <input type="checkbox" name="enable_ssl" checked>
+                <span>Enable SSL (Let's Encrypt)</span>
+            </label>
+            <small class="form-text">Automatically request and configure SSL certificate</small>
+        </div>
+        
+        <div class="form-group">
+            <label class="checkbox-label">
+                <input type="checkbox" name="create_database">
+                <span>Create MariaDB Database</span>
+            </label>
+            <small class="form-text">Automatically create a database for this site</small>
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary btn-lg">Create Site</button>
+            <a href="{{ url_for('dashboard') }}" class="btn btn-secondary btn-lg">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

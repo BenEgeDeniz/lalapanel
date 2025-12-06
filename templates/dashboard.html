@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Lala Panel{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Dashboard</h1>
+    <a href="{{ url_for('create_site') }}" class="btn btn-primary">+ Create New Site</a>
+</div>
+
+{% if sites %}
+<div class="sites-grid">
+    {% for site in sites %}
+    <div class="site-card">
+        <div class="site-header">
+            <h3>{{ site['domain'] }}</h3>
+            <span class="badge {% if site['ssl_enabled'] %}badge-success{% else %}badge-warning{% endif %}">
+                {% if site['ssl_enabled'] %}🔒 SSL{% else %}⚠️ No SSL{% endif %}
+            </span>
+        </div>
+        
+        <div class="site-info">
+            <div class="info-item">
+                <span class="label">PHP Version:</span>
+                <span class="value">{{ site['php_version'] }}</span>
+            </div>
+            <div class="info-item">
+                <span class="label">Created:</span>
+                <span class="value">{{ site['created_at'] }}</span>
+            </div>
+        </div>
+        
+        <div class="site-actions">
+            <a href="{{ url_for('site_detail', site_id=site['id']) }}" class="btn btn-sm btn-secondary">Manage</a>
+            <form method="POST" action="{{ url_for('delete_site', site_id=site['id']) }}" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete {{ site['domain'] }}?');">
+                <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <div class="empty-icon">🌐</div>
+    <h2>No sites yet</h2>
+    <p>Create your first site to get started</p>
+    <a href="{{ url_for('create_site') }}" class="btn btn-primary">Create Site</a>
+</div>
+{% endif %}
+{% endblock %}

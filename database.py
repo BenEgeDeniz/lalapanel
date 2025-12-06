@@ -1,0 +1,217 @@
+"""
+Database models for Lala Panel
+"""
+import sqlite3
+import os
+from datetime import datetime
+from contextlib import contextmanager
+
+class Database:
+    """Database handler for Lala Panel"""
+    
+    def __init__(self, db_path):
+        self.db_path = db_path
+        self._init_db()
+    
+    @contextmanager
+    def get_connection(self):
+        """Get database connection with context manager"""
+        conn = sqlite3.connect(self.db_path)
+        conn.row_factory = sqlite3.Row
+        try:
+            yield conn
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
+    
+    def _init_db(self):
+        """Initialize database tables"""
+        # Create directory if it doesn't exist
+        os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
+        
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            
+            # Users table
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS users (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    username TEXT UNIQUE NOT NULL,
+                    password_hash TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            
+            # Sites table
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS sites (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    domain TEXT UNIQUE NOT NULL,
+                    php_version TEXT NOT NULL,
+                    ssl_enabled INTEGER DEFAULT 0,
+                    ssl_expires TIMESTAMP,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            
+            # Databases table
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS databases (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    site_id INTEGER,
+                    db_name TEXT UNIQUE NOT NULL,
+                    db_user TEXT NOT NULL,
+                    db_password TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (site_id) REFERENCES sites (id) ON DELETE CASCADE
+                )
+            ''')
+            
+            # Login attempts table for rate limiting
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS login_attempts (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    ip_address TEXT NOT NULL,
+                    attempted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+    
+    def create_user(self, username, password_hash):
+        """Create a new user"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                'INSERT INTO users (username, password_hash) VALUES (?, ?)',
+                (username, password_hash)
+            )
+            return cursor.lastrowid
+    
+    def get_user(self, username):
+        """Get user by username"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM users WHERE username = ?', (username,))
+            return cursor.fetchone()
+    
+    def create_site(self, domain, php_version, ssl_enabled=False):
+        """Create a new site"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                'INSERT INTO sites (domain, php_version, ssl_enabled) VALUES (?, ?, ?)',
+                (domain, php_version, ssl_enabled)
+            )
+            return cursor.lastrowid
+    
+    def get_site(self, site_id):
+        """Get site by ID"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM sites WHERE id = ?', (site_id,))
+            return cursor.fetchone()
+    
+    def get_site_by_domain(self, domain):
+        """Get site by domain"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM sites WHERE domain = ?', (domain,))
+            return cursor.fetchone()
+    
+    def get_all_sites(self):
+        """Get all sites"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM sites ORDER BY created_at DESC')
+            return cursor.fetchall()
+    
+    def update_site(self, site_id, **kwargs):
+        """Update site attributes"""
+        fields = []
+        values = []
+        for key, value in kwargs.items():
+            fields.append(f"{key} = ?")
+            values.append(value)
+        
+        values.append(site_id)
+        
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                f'UPDATE sites SET {", ".join(fields)}, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+                values
+            )
+    
+    def delete_site(self, site_id):
+        """Delete a site"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('DELETE FROM sites WHERE id = ?', (site_id,))
+    
+    def create_database(self, site_id, db_name, db_user, db_password):
+        """Create a database record"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                'INSERT INTO databases (site_id, db_name, db_user, db_password) VALUES (?, ?, ?, ?)',
+                (site_id, db_name, db_user, db_password)
+            )
+            return cursor.lastrowid
+    
+    def get_databases_for_site(self, site_id):
+        """Get all databases for a site"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM databases WHERE site_id = ?', (site_id,))
+            return cursor.fetchall()
+    
+    def get_all_databases(self):
+        """Get all databases"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT d.*, s.domain 
+                FROM databases d
+                LEFT JOIN sites s ON d.site_id = s.id
+                ORDER BY d.created_at DESC
+            ''')
+            return cursor.fetchall()
+    
+    def delete_database(self, db_id):
+        """Delete a database record"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('DELETE FROM databases WHERE id = ?', (db_id,))
+    
+    def record_login_attempt(self, ip_address):
+        """Record a login attempt"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                'INSERT INTO login_attempts (ip_address) VALUES (?)',
+                (ip_address,)
+            )
+    
+    def get_recent_login_attempts(self, ip_address, minutes=15):
+        """Get recent login attempts for an IP"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT COUNT(*) as count FROM login_attempts 
+                WHERE ip_address = ? 
+                AND attempted_at > datetime('now', '-' || ? || ' minutes')
+            ''', (ip_address, minutes))
+            result = cursor.fetchone()
+            return result['count'] if result else 0
+    
+    def clear_old_login_attempts(self, hours=24):
+        """Clear old login attempts"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                DELETE FROM login_attempts 
+                WHERE attempted_at < datetime('now', '-' || ? || ' hours')
+            ''', (hours,))

@@ -1,0 +1,67 @@
+# Example Nginx site configuration
+# This is a template showing what Lala Panel generates
+
+server {
+    listen 80;
+    server_name example.com www.example.com;
+    
+    root /var/www/example.com/htdocs;
+    index index.php index.html index.htm;
+    
+    access_log /var/log/lalapanel/example.com/access.log;
+    error_log /var/log/lalapanel/example.com/error.log;
+    
+    # Security headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    
+    # PHP handling via FrankenPHP
+    location ~ \.php$ {
+        try_files $uri =404;
+        fastcgi_pass unix:/opt/frankenphp/php8.3/frankenphp.sock;
+        fastcgi_index index.php;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        include fastcgi_params;
+        fastcgi_param PHP_VALUE "upload_max_filesize=100M \n post_max_size=100M";
+    }
+    
+    # Static files caching
+    location ~* \.(jpg|jpeg|gif|png|css|js|ico|xml|svg|woff|woff2|ttf|eot)$ {
+        expires 30d;
+        add_header Cache-Control "public, immutable";
+    }
+    
+    # Deny access to hidden files
+    location ~ /\. {
+        deny all;
+    }
+    
+    # Default location
+    location / {
+        try_files $uri $uri/ /index.php?$args;
+    }
+}
+
+# SSL Configuration (added when SSL is enabled)
+# server {
+#     listen 443 ssl http2;
+#     server_name example.com www.example.com;
+#     
+#     root /var/www/example.com/htdocs;
+#     index index.php index.html index.htm;
+#     
+#     # SSL certificates
+#     ssl_certificate /etc/letsencrypt/live/example.com/fullchain.pem;
+#     ssl_certificate_key /etc/letsencrypt/live/example.com/privkey.pem;
+#     
+#     # SSL settings
+#     ssl_protocols TLSv1.2 TLSv1.3;
+#     ssl_ciphers HIGH:!aNULL:!MD5;
+#     ssl_prefer_server_ciphers on;
+#     
+#     # HSTS
+#     add_header Strict-Transport-Security "max-age=31536000" always;
+#     
+#     # ... rest of configuration same as above
+# }
