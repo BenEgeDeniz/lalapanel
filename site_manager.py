@@ -488,7 +488,7 @@ class UserManager:
         
         # Set password
         proc = subprocess.Popen(
-            ['/usr/bin/chpasswd'],
+            ['/usr/sbin/chpasswd'],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
