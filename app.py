@@ -488,6 +488,248 @@ def delete_ftp_user(user_id):
     
     return redirect(url_for('users'))
 
+@app.route('/files')
+@login_required
+def file_manager():
+    """File manager page"""
+    init_components()
+    sites = db.get_all_sites()
+    return render_template('file_manager.html', sites=sites)
+
+@app.route('/files/browse/<int:site_id>')
+@login_required
+def browse_files(site_id):
+    """Browse files for a site"""
+    init_components()
+    site = db.get_site(site_id)
+    if not site:
+        return jsonify({'error': 'Site not found'}), 404
+    
+    # Get path from query parameter (relative to site htdocs)
+    rel_path = request.args.get('path', '')
+    
+    # Security check: prevent directory traversal
+    if '..' in rel_path or rel_path.startswith('/'):
+        return jsonify({'error': 'Invalid path'}), 400
+    
+    # Build full path
+    base_path = os.path.join(app.config['SITES_DIR'], site['domain'], 'htdocs')
+    full_path = os.path.join(base_path, rel_path) if rel_path else base_path
+    
+    # Ensure we're still within the site directory
+    try:
+        full_path = os.path.realpath(full_path)
+        base_path = os.path.realpath(base_path)
+        if not full_path.startswith(base_path):
+            return jsonify({'error': 'Access denied'}), 403
+    except:
+        return jsonify({'error': 'Invalid path'}), 400
+    
+    if not os.path.exists(full_path):
+        return jsonify({'error': 'Path not found'}), 404
+    
+    if not os.path.isdir(full_path):
+        return jsonify({'error': 'Not a directory'}), 400
+    
+    # List directory contents
+    items = []
+    try:
+        for item in sorted(os.listdir(full_path)):
+            item_path = os.path.join(full_path, item)
+            rel_item_path = os.path.join(rel_path, item) if rel_path else item
+            
+            stat_info = os.stat(item_path)
+            items.append({
+                'name': item,
+                'path': rel_item_path,
+                'is_dir': os.path.isdir(item_path),
+                'size': stat_info.st_size if not os.path.isdir(item_path) else 0,
+                'modified': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(stat_info.st_mtime))
+            })
+    except PermissionError:
+        return jsonify({'error': 'Permission denied'}), 403
+    
+    return jsonify({
+        'path': rel_path,
+        'items': items,
+        'site': site['domain']
+    })
+
+@app.route('/files/download/<int:site_id>')
+@login_required
+def download_file(site_id):
+    """Download a file from a site"""
+    init_components()
+    site = db.get_site(site_id)
+    if not site:
+        flash('Site not found', 'error')
+        return redirect(url_for('file_manager'))
+    
+    # Get path from query parameter
+    rel_path = request.args.get('path', '')
+    
+    # Security check
+    if '..' in rel_path or rel_path.startswith('/') or not rel_path:
+        flash('Invalid path', 'error')
+        return redirect(url_for('file_manager'))
+    
+    # Build full path
+    base_path = os.path.join(app.config['SITES_DIR'], site['domain'], 'htdocs')
+    full_path = os.path.join(base_path, rel_path)
+    
+    # Ensure we're still within the site directory
+    try:
+        full_path = os.path.realpath(full_path)
+        base_path = os.path.realpath(base_path)
+        if not full_path.startswith(base_path):
+            flash('Access denied', 'error')
+            return redirect(url_for('file_manager'))
+    except:
+        flash('Invalid path', 'error')
+        return redirect(url_for('file_manager'))
+    
+    if not os.path.exists(full_path) or not os.path.isfile(full_path):
+        flash('File not found', 'error')
+        return redirect(url_for('file_manager'))
+    
+    from flask import send_file
+    return send_file(full_path, as_attachment=True, download_name=os.path.basename(full_path))
+
+@app.route('/files/upload/<int:site_id>', methods=['POST'])
+@login_required
+def upload_file(site_id):
+    """Upload a file to a site"""
+    init_components()
+    site = db.get_site(site_id)
+    if not site:
+        return jsonify({'error': 'Site not found'}), 404
+    
+    # Get path from form
+    rel_path = request.form.get('path', '')
+    
+    # Security check
+    if '..' in rel_path or rel_path.startswith('/'):
+        return jsonify({'error': 'Invalid path'}), 400
+    
+    # Get uploaded file
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file provided'}), 400
+    
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'No file selected'}), 400
+    
+    # Build full path
+    base_path = os.path.join(app.config['SITES_DIR'], site['domain'], 'htdocs')
+    upload_dir = os.path.join(base_path, rel_path) if rel_path else base_path
+    
+    # Ensure we're still within the site directory
+    try:
+        upload_dir = os.path.realpath(upload_dir)
+        base_path = os.path.realpath(base_path)
+        if not upload_dir.startswith(base_path):
+            return jsonify({'error': 'Access denied'}), 403
+    except:
+        return jsonify({'error': 'Invalid path'}), 400
+    
+    if not os.path.exists(upload_dir) or not os.path.isdir(upload_dir):
+        return jsonify({'error': 'Upload directory not found'}), 404
+    
+    # Save file
+    try:
+        file_path = os.path.join(upload_dir, file.filename)
+        file.save(file_path)
+        os.chmod(file_path, 0o644)
+        return jsonify({'success': True, 'filename': file.filename})
+    except Exception as e:
+        return jsonify({'error': f'Upload failed: {str(e)}'}), 500
+
+@app.route('/files/delete/<int:site_id>', methods=['POST'])
+@login_required
+def delete_file(site_id):
+    """Delete a file or directory from a site"""
+    init_components()
+    site = db.get_site(site_id)
+    if not site:
+        return jsonify({'error': 'Site not found'}), 404
+    
+    # Get path from form
+    rel_path = request.form.get('path', '')
+    
+    # Security check
+    if '..' in rel_path or rel_path.startswith('/') or not rel_path:
+        return jsonify({'error': 'Invalid path'}), 400
+    
+    # Build full path
+    base_path = os.path.join(app.config['SITES_DIR'], site['domain'], 'htdocs')
+    full_path = os.path.join(base_path, rel_path)
+    
+    # Ensure we're still within the site directory
+    try:
+        full_path = os.path.realpath(full_path)
+        base_path = os.path.realpath(base_path)
+        if not full_path.startswith(base_path):
+            return jsonify({'error': 'Access denied'}), 403
+    except:
+        return jsonify({'error': 'Invalid path'}), 400
+    
+    if not os.path.exists(full_path):
+        return jsonify({'error': 'File not found'}), 404
+    
+    # Delete file or directory
+    try:
+        if os.path.isdir(full_path):
+            shutil.rmtree(full_path)
+        else:
+            os.remove(full_path)
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'error': f'Delete failed: {str(e)}'}), 500
+
+@app.route('/files/create-folder/<int:site_id>', methods=['POST'])
+@login_required
+def create_folder(site_id):
+    """Create a new folder in a site"""
+    init_components()
+    site = db.get_site(site_id)
+    if not site:
+        return jsonify({'error': 'Site not found'}), 404
+    
+    # Get path and folder name from form
+    rel_path = request.form.get('path', '')
+    folder_name = request.form.get('folder_name', '')
+    
+    # Security check
+    if '..' in rel_path or rel_path.startswith('/'):
+        return jsonify({'error': 'Invalid path'}), 400
+    
+    if not folder_name or '..' in folder_name or '/' in folder_name:
+        return jsonify({'error': 'Invalid folder name'}), 400
+    
+    # Build full path
+    base_path = os.path.join(app.config['SITES_DIR'], site['domain'], 'htdocs')
+    parent_dir = os.path.join(base_path, rel_path) if rel_path else base_path
+    new_folder = os.path.join(parent_dir, folder_name)
+    
+    # Ensure we're still within the site directory
+    try:
+        new_folder = os.path.realpath(new_folder)
+        base_path = os.path.realpath(base_path)
+        if not new_folder.startswith(base_path):
+            return jsonify({'error': 'Access denied'}), 403
+    except:
+        return jsonify({'error': 'Invalid path'}), 400
+    
+    if os.path.exists(new_folder):
+        return jsonify({'error': 'Folder already exists'}), 400
+    
+    # Create folder
+    try:
+        os.makedirs(new_folder, mode=0o755)
+        return jsonify({'success': True, 'folder_name': folder_name})
+    except Exception as e:
+        return jsonify({'error': f'Failed to create folder: {str(e)}'}), 500
+
 if __name__ == '__main__':
     # Ensure directories exist
     try:
