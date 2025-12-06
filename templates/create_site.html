@@ -3,49 +3,147 @@
 {% block title %}Create Site - Lala Panel{% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <h1>Create New Site</h1>
-    <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">← Back to Dashboard</a>
-</div>
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="h2">Create New Site</h1>
+            <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Dashboard
+            </a>
+        </div>
 
-<div class="form-container">
-    <form method="POST" action="{{ url_for('create_site') }}" class="site-form">
-        <div class="form-group">
-            <label for="domain">Domain Name *</label>
-            <input type="text" id="domain" name="domain" class="form-control" 
-                   placeholder="example.com" required>
-            <small class="form-text">Enter the domain name without http:// or https://</small>
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                <form method="POST" action="{{ url_for('create_site') }}">
+                    <div class="mb-4">
+                        <label for="domain" class="form-label fw-semibold">
+                            <i class="bi bi-globe"></i> Domain Name *
+                        </label>
+                        <input type="text" id="domain" name="domain" class="form-control" 
+                               placeholder="example.com" required>
+                        <div class="form-text">Enter the domain name without http:// or https://</div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="php_version" class="form-label fw-semibold">
+                            <i class="bi bi-code-slash"></i> PHP Version *
+                        </label>
+                        <select id="php_version" name="php_version" class="form-select" required>
+                            {% for version in php_versions %}
+                            <option value="{{ version }}">PHP {{ version }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-shield-lock"></i> SSL Configuration
+                        </label>
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="radio" name="ssl_mode" id="ssl_auto" value="auto" checked>
+                                    <label class="form-check-label" for="ssl_auto">
+                                        <strong>Automatic SSL (Let's Encrypt)</strong>
+                                        <small class="d-block text-muted">Request SSL certificate automatically for domain and www subdomain</small>
+                                    </label>
+                                </div>
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="radio" name="ssl_mode" id="ssl_domain_only" value="domain_only">
+                                    <label class="form-check-label" for="ssl_domain_only">
+                                        <strong>SSL for Main Domain Only</strong>
+                                        <small class="d-block text-muted">Skip www subdomain (useful when DNS is not configured for www)</small>
+                                    </label>
+                                </div>
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="radio" name="ssl_mode" id="ssl_manual" value="manual">
+                                    <label class="form-check-label" for="ssl_manual">
+                                        <strong>Manual SSL (Configure Later)</strong>
+                                        <small class="d-block text-muted">I will upload SSL certificates manually</small>
+                                    </label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="ssl_mode" id="ssl_none" value="none">
+                                    <label class="form-check-label" for="ssl_none">
+                                        <strong>No SSL</strong>
+                                        <small class="d-block text-muted">HTTP only (not recommended)</small>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-gear"></i> PHP Settings
+                        </label>
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label for="upload_max_filesize" class="form-label">Max Upload Size</label>
+                                        <select id="upload_max_filesize" name="upload_max_filesize" class="form-select">
+                                            <option value="100M" selected>100 MB</option>
+                                            <option value="256M">256 MB</option>
+                                            <option value="512M">512 MB</option>
+                                            <option value="1G">1 GB</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="memory_limit" class="form-label">Memory Limit</label>
+                                        <select id="memory_limit" name="memory_limit" class="form-select">
+                                            <option value="128M">128 MB</option>
+                                            <option value="256M" selected>256 MB</option>
+                                            <option value="512M">512 MB</option>
+                                            <option value="1G">1 GB</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="max_execution_time" class="form-label">Max Execution Time</label>
+                                        <select id="max_execution_time" name="max_execution_time" class="form-select">
+                                            <option value="30">30 seconds</option>
+                                            <option value="60" selected>60 seconds</option>
+                                            <option value="120">120 seconds</option>
+                                            <option value="300">300 seconds</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="max_input_time" class="form-label">Max Input Time</label>
+                                        <select id="max_input_time" name="max_input_time" class="form-select">
+                                            <option value="60" selected>60 seconds</option>
+                                            <option value="120">120 seconds</option>
+                                            <option value="300">300 seconds</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-database"></i> Database
+                        </label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="create_database" id="create_database">
+                            <label class="form-check-label" for="create_database">
+                                Create MariaDB Database
+                                <small class="d-block text-muted">Automatically create a database for this site</small>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+                            Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary px-4">
+                            <i class="bi bi-plus-circle"></i> Create Site
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
-        
-        <div class="form-group">
-            <label for="php_version">PHP Version *</label>
-            <select id="php_version" name="php_version" class="form-control" required>
-                {% for version in php_versions %}
-                <option value="{{ version }}">PHP {{ version }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        
-        <div class="form-group">
-            <label class="checkbox-label">
-                <input type="checkbox" name="enable_ssl" checked>
-                <span>Enable SSL (Let's Encrypt)</span>
-            </label>
-            <small class="form-text">Automatically request and configure SSL certificate</small>
-        </div>
-        
-        <div class="form-group">
-            <label class="checkbox-label">
-                <input type="checkbox" name="create_database">
-                <span>Create MariaDB Database</span>
-            </label>
-            <small class="form-text">Automatically create a database for this site</small>
-        </div>
-        
-        <div class="form-actions">
-            <button type="submit" class="btn btn-primary btn-lg">Create Site</button>
-            <a href="{{ url_for('dashboard') }}" class="btn btn-secondary btn-lg">Cancel</a>
-        </div>
-    </form>
+    </div>
 </div>
 {% endblock %}

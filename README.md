@@ -1,14 +1,19 @@
 # 🚀 Lala Panel
 
-A minimal, lightweight hosting control panel designed specifically for PHP-based websites.
+A minimal, lightweight hosting control panel designed specifically for PHP-based websites with modern Bootstrap UI.
 
 ## Features
 
 - **Simple Site Management**: Create and delete websites with ease
 - **PHP-FPM Support**: Multiple PHP version support with hot-switching capability
-- **SSL Automation**: Automatic Let's Encrypt certificate generation and renewal
+- **Flexible SSL Options**: 
+  - Automatic Let's Encrypt certificate generation
+  - Manual SSL certificate upload
+  - Domain-only SSL (skip www subdomain)
+- **PHP Settings**: Configurable upload limits, memory limits, and execution time
 - **MariaDB Integration**: Built-in database management
-- **Clean UI**: Minimalist, fast web interface
+- **SSH/FTP User Management**: Create secure SFTP/SSH users for site file access
+- **Modern UI**: Professional Bootstrap 5 interface with responsive design
 - **Security-First**: HTTPS enforcement, rate-limited login, isolated site configurations
 
 ## Tech Stack
@@ -17,9 +22,9 @@ A minimal, lightweight hosting control panel designed specifically for PHP-based
 - **Web Server**: Nginx
 - **PHP Runtime**: PHP-FPM (with version switching)
 - **Database**: MariaDB
-- **SSL**: Let's Encrypt (certbot)
+- **SSL**: Let's Encrypt (certbot) + Manual certificates
 - **Backend**: Python 3 + Flask
-- **Frontend**: HTML5, CSS3, Vanilla JavaScript (no CDN dependencies)
+- **Frontend**: Bootstrap 5 + Bootstrap Icons
 
 ## Directory Structure
 
@@ -176,29 +181,74 @@ Login with the admin credentials you created during installation.
 1. Log in to the panel
 2. Click "Create New Site"
 3. Enter domain name (e.g., example.com)
-4. Select PHP version
-5. Enable SSL (optional, but recommended)
-6. Create database (optional)
-7. Click "Create Site"
+4. Select PHP version (8.1, 8.2, or 8.3)
+5. Choose SSL configuration:
+   - **Automatic SSL**: Request Let's Encrypt certificate for domain and www subdomain
+   - **Domain Only SSL**: Skip www subdomain (useful when DNS is not configured for www)
+   - **Manual SSL**: Upload your own SSL certificates later
+   - **No SSL**: HTTP only (not recommended)
+6. Configure PHP settings (upload limits, memory, execution time)
+7. Create database (optional)
+8. Click "Create Site"
 
 The panel will:
 - Create site directory structure
-- Generate Nginx configuration
-- Request SSL certificate (if enabled)
+- Generate Nginx configuration with custom PHP settings
+- Request SSL certificate (if auto mode selected)
 - Create database and user (if requested)
 - Reload Nginx
 
 ### Managing Sites
 
-- **View Sites**: Dashboard shows all sites with status
+- **View Sites**: Dashboard shows all sites with SSL status and PHP version
 - **Update PHP Version**: Change PHP version from site detail page
+- **SSL Management**: 
+  - Request Let's Encrypt SSL for existing sites
+  - Upload manual SSL certificates
+  - View certificate information
 - **Delete Site**: Removes all site files, configs, and databases
+
+### SSL Configuration
+
+#### Automatic SSL (Let's Encrypt)
+- Automatically requests and configures SSL certificates
+- Supports both domain and www subdomain
+- Option to skip www subdomain if DNS is not configured
+- Free certificates valid for 90 days (auto-renewal recommended via cron)
+
+#### Manual SSL Upload
+1. Navigate to site details
+2. Click "Upload SSL Certificates"
+3. Upload your certificate (fullchain.pem) and private key (privkey.pem)
+4. Nginx configuration will be automatically updated
 
 ### Database Management
 
 - Create databases for specific sites
-- View all databases with credentials
+- View all databases with credentials in secure modals
 - Delete databases when no longer needed
+- Automatic database name generation to avoid conflicts
+
+### SSH/FTP User Management
+
+Create secure users for file access:
+
+1. Navigate to "SSH/FTP" from the menu
+2. Click "Create SSH/FTP User"
+3. Select a site
+4. Enter username (lowercase, numbers, underscores only)
+5. Enter strong password (min 8 characters)
+6. Choose access type:
+   - **FTP Only**: SFTP access with restricted shell
+   - **SSH + FTP**: Full SSH terminal access plus SFTP
+
+Users are automatically restricted to their site directory for security.
+
+**Connecting via SFTP:**
+```bash
+sftp username@your-server-ip
+# Or use GUI clients like FileZilla, WinSCP, Cyberduck
+```
 
 ## Security
 
