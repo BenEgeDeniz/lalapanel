@@ -2,6 +2,8 @@
 Main Flask application for Lala Panel
 """
 import os
+import hashlib
+import time
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -179,9 +181,6 @@ def create_site():
             
             # Create database if requested
             if create_db:
-                import hashlib
-                import time
-                
                 # Generate unique database name with hash to avoid conflicts
                 domain_base = domain.replace('.', '_').replace('-', '_')
                 hash_suffix = hashlib.md5(f"{domain}{time.time()}".encode()).hexdigest()[:6]

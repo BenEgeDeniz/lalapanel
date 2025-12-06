@@ -6,6 +6,7 @@ import shutil
 import subprocess
 import secrets
 import string
+import re
 from pathlib import Path
 
 class SiteManager:
@@ -123,7 +124,7 @@ class SiteManager:
         
         # Build PHP value string
         php_value = f"upload_max_filesize={php_settings.get('upload_max_filesize', '100M')} \\n "
-        php_value += f"post_max_size={php_settings.get('upload_max_filesize', '100M')} \\n "
+        php_value += f"post_max_size={php_settings.get('post_max_size', php_settings.get('upload_max_filesize', '100M'))} \\n "
         php_value += f"memory_limit={php_settings.get('memory_limit', '256M')} \\n "
         php_value += f"max_execution_time={php_settings.get('max_execution_time', '60')} \\n "
         php_value += f"max_input_time={php_settings.get('max_input_time', '60')}"
@@ -340,7 +341,6 @@ class DatabaseManager:
     
     def _validate_identifier(self, identifier):
         """Validate database/user identifier to prevent SQL injection"""
-        import re
         if not re.match(r'^[a-zA-Z0-9_]+$', identifier):
             raise ValueError(f"Invalid identifier: {identifier}")
         return identifier
@@ -431,7 +431,6 @@ class UserManager:
     
     def _validate_username(self, username):
         """Validate username to prevent command injection"""
-        import re
         if not re.match(r'^[a-z0-9_]+$', username):
             raise ValueError(f"Invalid username: {username}")
         if len(username) > 32:
