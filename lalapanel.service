@@ -1,0 +1,28 @@
+[Unit]
+Description=Lala Panel Hosting Control Panel
+Documentation=https://github.com/BenEgeDeniz/lalapanel
+After=network.target mariadb.service nginx.service
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/opt/lalapanel
+Environment="PATH=/opt/lalapanel/venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+Environment="PYTHONUNBUFFERED=1"
+EnvironmentFile=-/opt/lalapanel/.env
+ExecStart=/opt/lalapanel/venv/bin/python /opt/lalapanel/app.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=lalapanel
+
+# Security settings
+NoNewPrivileges=false
+PrivateTmp=true
+ProtectSystem=false
+ProtectHome=false
+
+[Install]
+WantedBy=multi-user.target
