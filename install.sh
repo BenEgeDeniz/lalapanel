@@ -5,7 +5,7 @@
 # 
 # This script installs Lala Panel on Ubuntu with:
 # - Nginx
-# - FrankenPHP (multiple versions)
+# - PHP-FPM (multiple versions)
 # - MariaDB
 # - Let's Encrypt (certbot)
 ###############################################################################
