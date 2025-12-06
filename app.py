@@ -4,6 +4,7 @@ Main Flask application for Lala Panel
 import os
 import hashlib
 import time
+import subprocess
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -740,6 +741,17 @@ if __name__ == '__main__':
     
     # Initialize components
     init_components()
+    
+    # Ensure default server config exists to reject unknown domains
+    try:
+        default_config_path = os.path.join(app.config['NGINX_SITES_AVAILABLE'], '000-default')
+        if not os.path.exists(default_config_path):
+            print("Creating default server configuration to reject unknown domains...")
+            site_manager.create_default_server_config()
+            # Reload nginx to apply changes
+            subprocess.run(['/usr/bin/systemctl', 'reload', 'nginx'], check=False)
+    except Exception as e:
+        print(f"Warning: Could not create default server config: {e}")
     
     # Clean old login attempts on startup
     db.clear_old_login_attempts()
