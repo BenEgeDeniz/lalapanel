@@ -164,7 +164,13 @@ server {{
         add_header Cache-Control "public, immutable";
     }}
     
-    # Deny access to hidden files
+    # Let's Encrypt ACME challenge
+    location ^~ /.well-known/acme-challenge/ {{
+        allow all;
+        default_type "text/plain";
+    }}
+    
+    # Deny access to other hidden files
     location ~ /\\. {{
         deny all;
     }}
@@ -223,7 +229,13 @@ server {{
         add_header Cache-Control "public, immutable";
     }}
     
-    # Deny access to hidden files
+    # Let's Encrypt ACME challenge
+    location ^~ /.well-known/acme-challenge/ {{
+        allow all;
+        default_type "text/plain";
+    }}
+    
+    # Deny access to other hidden files
     location ~ /\\. {{
         deny all;
     }}
@@ -274,6 +286,11 @@ server {{
         site_path = os.path.join(self.sites_dir, domain)
         log_path = os.path.join(self.log_dir, domain)
         config_path = os.path.join(self.nginx_available, domain)
+        enabled_path = os.path.join(self.nginx_enabled, domain)
+        
+        # Remove enabled symlink if exists
+        if os.path.exists(enabled_path):
+            os.unlink(enabled_path)
         
         # Remove directories
         if os.path.exists(site_path):
@@ -443,7 +460,7 @@ class UserManager:
         username = self._validate_username(username)
         
         # Check if user already exists
-        result = subprocess.run(['id', username], capture_output=True, text=True)
+        result = subprocess.run(['/usr/bin/id', username], capture_output=True, text=True)
         if result.returncode == 0:
             raise Exception(f"User {username} already exists")
         
