@@ -92,15 +92,26 @@ setup_mariadb() {
     mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED BY '${MARIADB_ROOT_PASSWORD}';" 2>/dev/null || \
         mysqladmin -u root password "${MARIADB_ROOT_PASSWORD}"
     
+    # Create temporary MySQL config file for secure authentication
+    TEMP_MYCNF=$(mktemp)
+    cat > "$TEMP_MYCNF" << EOF
+[client]
+user=root
+password=${MARIADB_ROOT_PASSWORD}
+EOF
+    chmod 600 "$TEMP_MYCNF"
+    
     # Secure installation (basic)
-    mysql -u root -p"${MARIADB_ROOT_PASSWORD}" -e "DELETE FROM mysql.user WHERE User='';" 2>/dev/null || true
-    mysql -u root -p"${MARIADB_ROOT_PASSWORD}" -e "DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');" 2>/dev/null || true
-    mysql -u root -p"${MARIADB_ROOT_PASSWORD}" -e "DROP DATABASE IF EXISTS test;" 2>/dev/null || true
-    mysql -u root -p"${MARIADB_ROOT_PASSWORD}" -e "DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';" 2>/dev/null || true
-    mysql -u root -p"${MARIADB_ROOT_PASSWORD}" -e "FLUSH PRIVILEGES;" 2>/dev/null || true
+    mysql --defaults-extra-file="$TEMP_MYCNF" -e "DELETE FROM mysql.user WHERE User='';" 2>/dev/null || true
+    mysql --defaults-extra-file="$TEMP_MYCNF" -e "DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');" 2>/dev/null || true
+    mysql --defaults-extra-file="$TEMP_MYCNF" -e "DROP DATABASE IF EXISTS test;" 2>/dev/null || true
+    mysql --defaults-extra-file="$TEMP_MYCNF" -e "DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';" 2>/dev/null || true
+    mysql --defaults-extra-file="$TEMP_MYCNF" -e "FLUSH PRIVILEGES;" 2>/dev/null || true
+    
+    # Clean up temporary config file
+    rm -f "$TEMP_MYCNF"
     
     print_info "MariaDB setup complete"
-    print_info "MariaDB root password: ${MARIADB_ROOT_PASSWORD}"
 }
 
 install_php_fpm() {
@@ -330,19 +341,15 @@ show_completion_message() {
     echo
     echo "Admin credentials:"
     echo "  Username: $ADMIN_USER"
-    echo "  Password: [your password]"
-    echo
-    echo "MariaDB root password:"
-    echo "  $MARIADB_ROOT_PASSWORD"
-    echo
-    echo "Let's Encrypt email:"
-    echo "  $LETSENCRYPT_EMAIL"
     echo
     echo "Important notes:"
     echo "  - Configure firewall to allow port 8080"
     echo "  - PHP-FPM is installed and running for PHP 8.1, 8.2, and 8.3"
-    echo "  - All credentials are stored in /etc/lalapanel/lalapanel.env"
+    echo "  - All credentials (MariaDB root password, Let's Encrypt email)"
+    echo "    are securely stored in /etc/lalapanel/lalapanel.env"
     echo "  - Keep this file secure and backed up!"
+    echo "  - The MariaDB root password can be retrieved with:"
+    echo "    sudo grep MARIADB_ROOT_PASSWORD /etc/lalapanel/lalapanel.env"
     echo
     echo "================================================================"
 }
