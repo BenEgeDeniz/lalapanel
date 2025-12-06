@@ -3,48 +3,66 @@
 {% block title %}Dashboard - Lala Panel{% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <h1>Dashboard</h1>
-    <a href="{{ url_for('create_site') }}" class="btn btn-primary">+ Create New Site</a>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h2">Dashboard</h1>
+    <a href="{{ url_for('create_site') }}" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> Create New Site
+    </a>
 </div>
 
 {% if sites %}
-<div class="sites-grid">
+<div class="row g-3">
     {% for site in sites %}
-    <div class="site-card">
-        <div class="site-header">
-            <h3>{{ site['domain'] }}</h3>
-            <span class="badge {% if site['ssl_enabled'] %}badge-success{% else %}badge-warning{% endif %}">
-                {% if site['ssl_enabled'] %}🔒 SSL{% else %}⚠️ No SSL{% endif %}
-            </span>
-        </div>
-        
-        <div class="site-info">
-            <div class="info-item">
-                <span class="label">PHP Version:</span>
-                <span class="value">{{ site['php_version'] }}</span>
+    <div class="col-md-6 col-lg-4">
+        <div class="card site-card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-globe"></i> {{ site['domain'] }}
+                    </h5>
+                    <span class="badge {% if site['ssl_enabled'] %}bg-success{% else %}bg-warning{% endif %}">
+                        {% if site['ssl_enabled'] %}
+                        <i class="bi bi-lock-fill"></i> SSL
+                        {% else %}
+                        <i class="bi bi-exclamation-triangle"></i> No SSL
+                        {% endif %}
+                    </span>
+                </div>
+                
+                <ul class="list-unstyled mb-3">
+                    <li class="mb-2">
+                        <span class="text-muted">PHP Version:</span>
+                        <span class="badge bg-secondary">{{ site['php_version'] }}</span>
+                    </li>
+                    <li class="mb-2">
+                        <small class="text-muted">
+                            <i class="bi bi-calendar"></i> Created: {{ site['created_at'] }}
+                        </small>
+                    </li>
+                </ul>
+                
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('site_detail', site_id=site['id']) }}" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-gear"></i> Manage
+                    </a>
+                </div>
             </div>
-            <div class="info-item">
-                <span class="label">Created:</span>
-                <span class="value">{{ site['created_at'] }}</span>
-            </div>
-        </div>
-        
-        <div class="site-actions">
-            <a href="{{ url_for('site_detail', site_id=site['id']) }}" class="btn btn-sm btn-secondary">Manage</a>
-            <form method="POST" action="{{ url_for('delete_site', site_id=site['id']) }}" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete {{ site['domain'] }}?');">
-                <button type="submit" class="btn btn-sm btn-danger">Delete</button>
-            </form>
         </div>
     </div>
     {% endfor %}
 </div>
 {% else %}
-<div class="empty-state">
-    <div class="empty-icon">🌐</div>
-    <h2>No sites yet</h2>
-    <p>Create your first site to get started</p>
-    <a href="{{ url_for('create_site') }}" class="btn btn-primary">Create Site</a>
+<div class="card text-center py-5">
+    <div class="card-body">
+        <div class="display-1 mb-3">
+            <i class="bi bi-globe text-muted"></i>
+        </div>
+        <h3>No sites yet</h3>
+        <p class="text-muted mb-4">Create your first site to get started with Lala Panel</p>
+        <a href="{{ url_for('create_site') }}" class="btn btn-primary btn-lg">
+            <i class="bi bi-plus-circle"></i> Create Your First Site
+        </a>
+    </div>
 </div>
 {% endif %}
 {% endblock %}

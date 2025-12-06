@@ -3,70 +3,141 @@
 {% block title %}Databases - Lala Panel{% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <h1>Database Management</h1>
-    <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">← Back to Dashboard</a>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h2">
+        <i class="bi bi-database"></i> Database Management
+    </h1>
+    <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Dashboard
+    </a>
 </div>
 
-<div class="detail-section">
-    <h2>Create New Database</h2>
-    <form method="POST" action="{{ url_for('create_database') }}" class="inline-form">
-        <div class="form-row">
-            <select name="site_id" class="form-control" required>
-                <option value="">Select a site...</option>
-                {% for site in sites %}
-                <option value="{{ site['id'] }}">{{ site['domain'] }}</option>
-                {% endfor %}
-            </select>
-            <input type="text" name="db_name" class="form-control" 
-                   placeholder="database_name" required>
-            <button type="submit" class="btn btn-primary">Create Database</button>
+<div class="row">
+    <div class="col-lg-5 mb-4">
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="bi bi-plus-circle"></i> Create New Database</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('create_database') }}">
+                    <div class="mb-3">
+                        <label for="site_id" class="form-label">Select Site *</label>
+                        <select name="site_id" id="site_id" class="form-select" required>
+                            <option value="">Choose a site...</option>
+                            {% for site in sites %}
+                            <option value="{{ site['id'] }}">{{ site['domain'] }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="db_name" class="form-label">Database Name *</label>
+                        <input type="text" name="db_name" id="db_name" class="form-control" 
+                               placeholder="my_database" required pattern="[a-zA-Z0-9_]+">
+                        <div class="form-text">Only letters, numbers, and underscores allowed</div>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-plus-circle"></i> Create Database
+                        </button>
+                    </div>
+                </form>
+            </div>
         </div>
-        <small class="form-text">Database name should contain only letters, numbers, and underscores</small>
-    </form>
-</div>
-
-<div class="detail-section">
-    <h2>All Databases</h2>
-    {% if databases %}
-    <div class="table-responsive">
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Site</th>
-                    <th>Database Name</th>
-                    <th>Username</th>
-                    <th>Password</th>
-                    <th>Created</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for db in databases %}
-                <tr>
-                    <td>{{ db['domain'] or 'N/A' }}</td>
-                    <td><code>{{ db['db_name'] }}</code></td>
-                    <td><code>{{ db['db_user'] }}</code></td>
-                    <td><code class="password-field">{{ db['db_password'] }}</code></td>
-                    <td>{{ db['created_at'] }}</td>
-                    <td>
-                        <form method="POST" action="{{ url_for('delete_database', db_id=db['id']) }}" 
-                              style="display: inline;" 
-                              onsubmit="return confirm('Are you sure you want to delete {{ db['db_name'] }}?');">
-                            <button type="submit" class="btn btn-sm btn-danger">Delete</button>
-                        </form>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
     </div>
-    {% else %}
-    <div class="empty-state">
-        <div class="empty-icon">🗄️</div>
-        <h2>No databases yet</h2>
-        <p>Create a database to get started</p>
+    
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="bi bi-list"></i> All Databases</h5>
+            </div>
+            <div class="card-body">
+                {% if databases %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Site</th>
+                                <th>Database</th>
+                                <th>User</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for db in databases %}
+                            <tr>
+                                <td>
+                                    <i class="bi bi-globe text-muted"></i>
+                                    {{ db['domain'] or 'N/A' }}
+                                </td>
+                                <td><code>{{ db['db_name'] }}</code></td>
+                                <td><code>{{ db['db_user'] }}</code></td>
+                                <td>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" 
+                                            data-bs-toggle="modal" data-bs-target="#dbModal{{ db['id'] }}">
+                                        <i class="bi bi-eye"></i> View
+                                    </button>
+                                    <form method="POST" action="{{ url_for('delete_database', db_id=db['id']) }}" 
+                                          style="display: inline;" 
+                                          onsubmit="return confirm('Delete database {{ db['db_name'] }}?');">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            <!-- Modal for database details -->
+                            <div class="modal fade" id="dbModal{{ db['id'] }}" tabindex="-1">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title">Database Credentials</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <table class="table table-sm">
+                                                <tr>
+                                                    <th width="40%">Database Name:</th>
+                                                    <td><code>{{ db['db_name'] }}</code></td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Username:</th>
+                                                    <td><code>{{ db['db_user'] }}</code></td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Password:</th>
+                                                    <td><code>{{ db['db_password'] }}</code></td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Host:</th>
+                                                    <td><code>localhost</code></td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Created:</th>
+                                                    <td>{{ db['created_at'] }}</td>
+                                                </tr>
+                                            </table>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <div class="display-1 mb-3">
+                        <i class="bi bi-database text-muted"></i>
+                    </div>
+                    <h5>No databases yet</h5>
+                    <p class="text-muted">Create your first database to get started</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
     </div>
-    {% endif %}
 </div>
 {% endblock %}

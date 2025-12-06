@@ -120,8 +120,16 @@ def create_site():
     if request.method == 'POST':
         domain = request.form.get('domain')
         php_version = request.form.get('php_version')
-        enable_ssl = request.form.get('enable_ssl') == 'on'
+        ssl_mode = request.form.get('ssl_mode', 'none')
         create_db = request.form.get('create_database') == 'on'
+        
+        # Get PHP settings
+        php_settings = {
+            'upload_max_filesize': request.form.get('upload_max_filesize', '100M'),
+            'memory_limit': request.form.get('memory_limit', '256M'),
+            'max_execution_time': request.form.get('max_execution_time', '60'),
+            'max_input_time': request.form.get('max_input_time', '60')
+        }
         
         try:
             # Check if site already exists
@@ -134,24 +142,38 @@ def create_site():
             site_manager.create_site_directories(domain)
             
             # Create nginx config (without SSL initially)
-            site_manager.create_nginx_config(domain, php_version, ssl_enabled=False)
+            site_manager.create_nginx_config(domain, php_version, ssl_enabled=False, php_settings=php_settings)
             
             # Enable site
             site_manager.enable_site(domain)
             
-            # Request SSL if enabled
-            if enable_ssl:
+            # Handle SSL based on mode
+            ssl_enabled = False
+            if ssl_mode == 'auto':
                 try:
-                    site_manager.request_ssl_certificate(domain)
+                    site_manager.request_ssl_certificate(domain, include_www=True)
                     # Recreate nginx config with SSL
-                    site_manager.create_nginx_config(domain, php_version, ssl_enabled=True)
+                    site_manager.create_nginx_config(domain, php_version, ssl_enabled=True, php_settings=php_settings)
                     site_manager.enable_site(domain)
+                    ssl_enabled = True
+                    flash(f'SSL certificate obtained successfully for {domain} and www.{domain}', 'success')
                 except Exception as e:
-                    flash(f'Warning: SSL certificate request failed: {str(e)}', 'warning')
-                    enable_ssl = False
+                    flash(f'Warning: SSL certificate request failed: {str(e)}. You can configure SSL manually later.', 'warning')
+            elif ssl_mode == 'domain_only':
+                try:
+                    site_manager.request_ssl_certificate(domain, include_www=False)
+                    # Recreate nginx config with SSL
+                    site_manager.create_nginx_config(domain, php_version, ssl_enabled=True, php_settings=php_settings)
+                    site_manager.enable_site(domain)
+                    ssl_enabled = True
+                    flash(f'SSL certificate obtained successfully for {domain} (without www)', 'success')
+                except Exception as e:
+                    flash(f'Warning: SSL certificate request failed: {str(e)}. You can configure SSL manually later.', 'warning')
+            elif ssl_mode == 'manual':
+                flash('Site created. Configure SSL manually via the site management page.', 'info')
             
             # Create database record
-            site_id = db.create_site(domain, php_version, ssl_enabled=enable_ssl)
+            site_id = db.create_site(domain, php_version, ssl_enabled=ssl_enabled)
             
             # Create database if requested
             if create_db:
@@ -216,6 +238,84 @@ def update_site_php(site_id):
         flash(f'PHP version updated to {new_php_version}', 'success')
     except Exception as e:
         flash(f'Error updating PHP version: {str(e)}', 'error')
+    
+    return redirect(url_for('site_detail', site_id=site_id))
+
+@app.route('/sites/<int:site_id>/request-ssl', methods=['POST'])
+@login_required
+def request_ssl(site_id):
+    """Request SSL certificate for a site"""
+    init_components()
+    site = db.get_site(site_id)
+    if not site:
+        flash('Site not found', 'error')
+        return redirect(url_for('dashboard'))
+    
+    ssl_mode = request.form.get('ssl_mode', 'auto')
+    
+    try:
+        # Request SSL certificate
+        include_www = ssl_mode == 'auto'
+        site_manager.request_ssl_certificate(site['domain'], include_www=include_www)
+        
+        # Update nginx config with SSL
+        site_manager.create_nginx_config(site['domain'], site['php_version'], ssl_enabled=True)
+        site_manager.enable_site(site['domain'])
+        
+        # Update database
+        db.update_site(site_id, ssl_enabled=True)
+        
+        flash(f'SSL certificate obtained successfully for {site["domain"]}', 'success')
+    except Exception as e:
+        flash(f'Error requesting SSL certificate: {str(e)}', 'error')
+    
+    return redirect(url_for('site_detail', site_id=site_id))
+
+@app.route('/sites/<int:site_id>/upload-ssl', methods=['POST'])
+@login_required
+def upload_ssl(site_id):
+    """Upload manual SSL certificates"""
+    init_components()
+    site = db.get_site(site_id)
+    if not site:
+        flash('Site not found', 'error')
+        return redirect(url_for('dashboard'))
+    
+    cert_file = request.files.get('cert_file')
+    key_file = request.files.get('key_file')
+    
+    if not cert_file or not key_file:
+        flash('Both certificate and key files are required', 'error')
+        return redirect(url_for('site_detail', site_id=site_id))
+    
+    try:
+        import os
+        
+        # Create SSL directory for manual certs
+        ssl_dir = f"/etc/letsencrypt/live/{site['domain']}"
+        os.makedirs(ssl_dir, exist_ok=True)
+        
+        # Save certificate files
+        cert_path = os.path.join(ssl_dir, 'fullchain.pem')
+        key_path = os.path.join(ssl_dir, 'privkey.pem')
+        
+        cert_file.save(cert_path)
+        key_file.save(key_path)
+        
+        # Set proper permissions
+        os.chmod(cert_path, 0o644)
+        os.chmod(key_path, 0o600)
+        
+        # Update nginx config with SSL
+        site_manager.create_nginx_config(site['domain'], site['php_version'], ssl_enabled=True)
+        site_manager.enable_site(site['domain'])
+        
+        # Update database
+        db.update_site(site_id, ssl_enabled=True)
+        
+        flash('SSL certificates uploaded and configured successfully', 'success')
+    except Exception as e:
+        flash(f'Error uploading SSL certificates: {str(e)}', 'error')
     
     return redirect(url_for('site_detail', site_id=site_id))
 

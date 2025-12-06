@@ -3,119 +3,235 @@
 {% block title %}{{ site['domain'] }} - Lala Panel{% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <h1>{{ site['domain'] }}</h1>
-    <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">← Back to Dashboard</a>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h2">
+        <i class="bi bi-globe"></i> {{ site['domain'] }}
+    </h1>
+    <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Dashboard
+    </a>
 </div>
 
-<div class="site-detail">
-    <div class="detail-section">
-        <h2>Site Information</h2>
-        
-        <div class="info-grid">
-            <div class="info-item">
-                <span class="label">Domain:</span>
-                <span class="value">{{ site['domain'] }}</span>
+<div class="row g-3">
+    <!-- Site Information -->
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="bi bi-info-circle"></i> Site Information</h5>
             </div>
-            <div class="info-item">
-                <span class="label">PHP Version:</span>
-                <span class="value">{{ site['php_version'] }}</span>
-            </div>
-            <div class="info-item">
-                <span class="label">SSL Status:</span>
-                <span class="value">
-                    {% if site['ssl_enabled'] %}
-                    <span class="badge badge-success">🔒 Enabled</span>
-                    {% else %}
-                    <span class="badge badge-warning">⚠️ Disabled</span>
-                    {% endif %}
-                </span>
-            </div>
-            <div class="info-item">
-                <span class="label">Created:</span>
-                <span class="value">{{ site['created_at'] }}</span>
-            </div>
-            <div class="info-item">
-                <span class="label">Last Updated:</span>
-                <span class="value">{{ site['updated_at'] }}</span>
-            </div>
-            <div class="info-item">
-                <span class="label">Site Path:</span>
-                <span class="value"><code>/var/www/{{ site['domain'] }}/htdocs</code></span>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <tbody>
+                        <tr>
+                            <th width="40%">Domain:</th>
+                            <td><code>{{ site['domain'] }}</code></td>
+                        </tr>
+                        <tr>
+                            <th>PHP Version:</th>
+                            <td><span class="badge bg-secondary">{{ site['php_version'] }}</span></td>
+                        </tr>
+                        <tr>
+                            <th>SSL Status:</th>
+                            <td>
+                                {% if site['ssl_enabled'] %}
+                                <span class="badge bg-success"><i class="bi bi-lock-fill"></i> Enabled</span>
+                                {% else %}
+                                <span class="badge bg-warning"><i class="bi bi-exclamation-triangle"></i> Disabled</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Created:</th>
+                            <td>{{ site['created_at'] }}</td>
+                        </tr>
+                        <tr>
+                            <th>Last Updated:</th>
+                            <td>{{ site['updated_at'] }}</td>
+                        </tr>
+                        <tr>
+                            <th>Site Path:</th>
+                            <td><code>/var/www/{{ site['domain'] }}/htdocs</code></td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
     
-    <div class="detail-section">
-        <h2>PHP Version Management</h2>
-        <form method="POST" action="{{ url_for('update_site_php', site_id=site['id']) }}" class="inline-form">
-            <div class="form-row">
-                <select name="php_version" class="form-control">
-                    {% for version in php_versions %}
-                    <option value="{{ version }}" {% if version == site['php_version'] %}selected{% endif %}>
-                        PHP {{ version }}
-                    </option>
-                    {% endfor %}
-                </select>
-                <button type="submit" class="btn btn-primary">Update PHP Version</button>
+    <!-- SSL Management -->
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="bi bi-shield-lock"></i> SSL Management</h5>
             </div>
-        </form>
-    </div>
-    
-    <div class="detail-section">
-        <h2>Databases</h2>
-        {% if databases %}
-        <div class="table-responsive">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>Database Name</th>
-                        <th>Username</th>
-                        <th>Password</th>
-                        <th>Created</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for db in databases %}
-                    <tr>
-                        <td><code>{{ db['db_name'] }}</code></td>
-                        <td><code>{{ db['db_user'] }}</code></td>
-                        <td><code class="password-field">{{ db['db_password'] }}</code></td>
-                        <td>{{ db['created_at'] }}</td>
-                        <td>
-                            <form method="POST" action="{{ url_for('delete_database', db_id=db['id']) }}" 
-                                  style="display: inline;" 
-                                  onsubmit="return confirm('Are you sure you want to delete this database?');">
-                                <button type="submit" class="btn btn-sm btn-danger">Delete</button>
-                            </form>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        {% else %}
-        <p class="text-muted">No databases configured for this site.</p>
-        <p><a href="{{ url_for('databases') }}">Go to Database Management</a> to create one.</p>
-        {% endif %}
-    </div>
-    
-    <div class="detail-section">
-        <h2>Nginx Configuration</h2>
-        <div class="config-info">
-            <p><strong>Config File:</strong> <code>/etc/nginx/sites-available/{{ site['domain'] }}</code></p>
-            <p><strong>Log Files:</strong> <code>/var/log/lalapanel/{{ site['domain'] }}/</code></p>
+            <div class="card-body">
+                {% if site['ssl_enabled'] %}
+                <div class="alert alert-success">
+                    <i class="bi bi-check-circle"></i> SSL is active for this site
+                </div>
+                <p class="text-muted mb-3">Certificate files:</p>
+                <ul class="list-unstyled small">
+                    <li><code>/etc/letsencrypt/live/{{ site['domain'] }}/fullchain.pem</code></li>
+                    <li><code>/etc/letsencrypt/live/{{ site['domain'] }}/privkey.pem</code></li>
+                </ul>
+                {% else %}
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle"></i> SSL is not configured
+                </div>
+                <form method="POST" action="{{ url_for('request_ssl', site_id=site['id']) }}">
+                    <div class="mb-3">
+                        <label class="form-label">Request SSL Certificate:</label>
+                        <select name="ssl_mode" class="form-select mb-2">
+                            <option value="auto">Domain + www subdomain</option>
+                            <option value="domain_only">Main domain only</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        <i class="bi bi-lock"></i> Request Let's Encrypt SSL
+                    </button>
+                </form>
+                <hr>
+                <h6>Manual SSL Upload</h6>
+                <form method="POST" action="{{ url_for('upload_ssl', site_id=site['id']) }}" enctype="multipart/form-data">
+                    <div class="mb-2">
+                        <label class="form-label small">Certificate (fullchain.pem):</label>
+                        <input type="file" name="cert_file" class="form-control form-control-sm" required>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small">Private Key (privkey.pem):</label>
+                        <input type="file" name="key_file" class="form-control form-control-sm" required>
+                    </div>
+                    <button type="submit" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-upload"></i> Upload SSL Certificates
+                    </button>
+                </form>
+                {% endif %}
+            </div>
         </div>
     </div>
     
-    <div class="detail-section danger-zone">
-        <h2>Danger Zone</h2>
-        <p>Once you delete a site, there is no going back. Please be certain.</p>
-        <form method="POST" action="{{ url_for('delete_site', site_id=site['id']) }}" 
-              onsubmit="return confirm('Are you absolutely sure you want to delete {{ site['domain'] }}? This action cannot be undone!');">
-            <button type="submit" class="btn btn-danger">Delete Site</button>
-        </form>
+    <!-- PHP Version Management -->
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="bi bi-code-slash"></i> PHP Configuration</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('update_site_php', site_id=site['id']) }}">
+                    <div class="mb-3">
+                        <label class="form-label">PHP Version:</label>
+                        <select name="php_version" class="form-select">
+                            {% for version in php_versions %}
+                            <option value="{{ version }}" {% if version == site['php_version'] %}selected{% endif %}>
+                                PHP {{ version }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        <i class="bi bi-arrow-repeat"></i> Update PHP Version
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Databases -->
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="bi bi-database"></i> Databases</h5>
+            </div>
+            <div class="card-body">
+                {% if databases %}
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Database</th>
+                                <th>User</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for db in databases %}
+                            <tr>
+                                <td><code class="small">{{ db['db_name'] }}</code></td>
+                                <td><code class="small">{{ db['db_user'] }}</code></td>
+                                <td>
+                                    <form method="POST" action="{{ url_for('delete_database', db_id=db['id']) }}" 
+                                          style="display: inline;" 
+                                          onsubmit="return confirm('Delete database {{ db['db_name'] }}?');">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td colspan="3" class="small text-muted">
+                                    Password: <code>{{ db['db_password'] }}</code>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">No databases configured for this site.</p>
+                <a href="{{ url_for('databases') }}" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-plus-circle"></i> Create Database
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- File Paths -->
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="bi bi-folder"></i> File Paths</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p class="mb-2"><strong>Web Root:</strong></p>
+                        <p><code>/var/www/{{ site['domain'] }}/htdocs</code></p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-2"><strong>Nginx Config:</strong></p>
+                        <p><code>/etc/nginx/sites-available/{{ site['domain'] }}</code></p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-2"><strong>Access Log:</strong></p>
+                        <p><code>/var/log/lalapanel/{{ site['domain'] }}/access.log</code></p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-2"><strong>Error Log:</strong></p>
+                        <p><code>/var/log/lalapanel/{{ site['domain'] }}/error.log</code></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Danger Zone -->
+    <div class="col-12">
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Danger Zone</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">Once you delete a site, there is no going back. Please be certain.</p>
+                <form method="POST" action="{{ url_for('delete_site', site_id=site['id']) }}" 
+                      onsubmit="return confirm('Are you absolutely sure you want to delete {{ site['domain'] }}? This action cannot be undone!');">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash"></i> Delete Site Permanently
+                    </button>
+                </form>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}

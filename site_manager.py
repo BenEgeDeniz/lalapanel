@@ -102,7 +102,7 @@ class SiteManager:
         
         return site_path
     
-    def create_nginx_config(self, domain, php_version, ssl_enabled=False):
+    def create_nginx_config(self, domain, php_version, ssl_enabled=False, php_settings=None):
         """Create Nginx configuration for a site"""
         site_path = os.path.join(self.sites_dir, domain)
         log_path = os.path.join(self.log_dir, domain)
@@ -110,6 +110,23 @@ class SiteManager:
         
         # PHP-FPM socket path
         php_fpm_socket = f"{self.php_fpm_socket_dir}/php{php_version}-fpm.sock"
+        
+        # Default PHP settings
+        if php_settings is None:
+            php_settings = {
+                'upload_max_filesize': '100M',
+                'post_max_size': '100M',
+                'memory_limit': '256M',
+                'max_execution_time': '60',
+                'max_input_time': '60'
+            }
+        
+        # Build PHP value string
+        php_value = f"upload_max_filesize={php_settings.get('upload_max_filesize', '100M')} \\n "
+        php_value += f"post_max_size={php_settings.get('upload_max_filesize', '100M')} \\n "
+        php_value += f"memory_limit={php_settings.get('memory_limit', '256M')} \\n "
+        php_value += f"max_execution_time={php_settings.get('max_execution_time', '60')} \\n "
+        php_value += f"max_input_time={php_settings.get('max_input_time', '60')}"
         
         # Build config
         config = f"""# Nginx configuration for {domain}
@@ -137,7 +154,7 @@ server {{
         fastcgi_index index.php;
         fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
         include fastcgi_params;
-        fastcgi_param PHP_VALUE "upload_max_filesize=100M \\n post_max_size=100M";
+        fastcgi_param PHP_VALUE "{php_value}";
     }}
     
     # Static files
@@ -195,7 +212,7 @@ server {{
         fastcgi_index index.php;
         fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
         include fastcgi_params;
-        fastcgi_param PHP_VALUE "upload_max_filesize=100M \\n post_max_size=100M";
+        fastcgi_param PHP_VALUE "{php_value}";
         fastcgi_param HTTPS on;
     }}
     
@@ -268,19 +285,26 @@ server {{
         if os.path.exists(config_path):
             os.remove(config_path)
     
-    def request_ssl_certificate(self, domain):
+    def request_ssl_certificate(self, domain, include_www=True):
         """Request SSL certificate from Let's Encrypt"""
         letsencrypt_email = self._get_config_value('LETSENCRYPT_EMAIL')
-        result = subprocess.run([
+        
+        # Build certbot command
+        cmd = [
             '/usr/bin/certbot', 'certonly',
             '--non-interactive',
             '--agree-tos',
             '--email', letsencrypt_email,
             '--webroot',
             '-w', os.path.join(self.sites_dir, domain, 'htdocs'),
-            '-d', domain,
-            '-d', f'www.{domain}'
-        ], capture_output=True, text=True)
+            '-d', domain
+        ]
+        
+        # Add www subdomain if requested
+        if include_www:
+            cmd.extend(['-d', f'www.{domain}'])
+        
+        result = subprocess.run(cmd, capture_output=True, text=True)
         
         if result.returncode != 0:
             raise Exception(f"SSL certificate request failed: {result.stderr}")
