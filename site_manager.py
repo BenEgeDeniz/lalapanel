@@ -13,11 +13,19 @@ class SiteManager:
     
     def __init__(self, config):
         self.config = config
-        self.sites_dir = config.get('SITES_DIR') if hasattr(config, 'get') else config.SITES_DIR
-        self.log_dir = config.get('LOG_DIR') if hasattr(config, 'get') else config.LOG_DIR
-        self.nginx_available = config.get('NGINX_SITES_AVAILABLE') if hasattr(config, 'get') else config.NGINX_SITES_AVAILABLE
-        self.nginx_enabled = config.get('NGINX_SITES_ENABLED') if hasattr(config, 'get') else config.NGINX_SITES_ENABLED
-        self.frankenphp_dir = config.get('FRANKENPHP_DIR') if hasattr(config, 'get') else config.FRANKENPHP_DIR
+        self._init_config_values()
+    
+    def _get_config_value(self, key):
+        """Helper to get config value from dict or object"""
+        return self.config.get(key) if hasattr(self.config, 'get') else getattr(self.config, key)
+    
+    def _init_config_values(self):
+        """Initialize configuration values"""
+        self.sites_dir = self._get_config_value('SITES_DIR')
+        self.log_dir = self._get_config_value('LOG_DIR')
+        self.nginx_available = self._get_config_value('NGINX_SITES_AVAILABLE')
+        self.nginx_enabled = self._get_config_value('NGINX_SITES_ENABLED')
+        self.frankenphp_dir = self._get_config_value('FRANKENPHP_DIR')
     
     def create_site_directories(self, domain):
         """Create directories for a new site"""
@@ -262,7 +270,7 @@ server {{
     
     def request_ssl_certificate(self, domain):
         """Request SSL certificate from Let's Encrypt"""
-        letsencrypt_email = self.config.get('LETSENCRYPT_EMAIL') if hasattr(self.config, 'get') else self.config.LETSENCRYPT_EMAIL
+        letsencrypt_email = self._get_config_value('LETSENCRYPT_EMAIL')
         result = subprocess.run([
             'certbot', 'certonly',
             '--non-interactive',
@@ -283,7 +291,12 @@ server {{
         """Update PHP version for a site"""
         # Get current SSL status
         enabled_path = os.path.join(self.nginx_enabled, domain)
-        ssl_enabled = 'ssl' in open(os.path.join(self.nginx_available, domain)).read()
+        config_path = os.path.join(self.nginx_available, domain)
+        
+        ssl_enabled = False
+        if os.path.exists(config_path):
+            with open(config_path, 'r') as f:
+                ssl_enabled = 'ssl' in f.read()
         
         # Recreate nginx config with new PHP version
         self.create_nginx_config(domain, new_php_version, ssl_enabled)
@@ -297,9 +310,16 @@ class DatabaseManager:
     
     def __init__(self, config):
         self.config = config
-        self.host = config.get('MARIADB_HOST') if hasattr(config, 'get') else config.MARIADB_HOST
-        self.port = config.get('MARIADB_PORT') if hasattr(config, 'get') else config.MARIADB_PORT
-        self.root_password = config.get('MARIADB_ROOT_PASSWORD') if hasattr(config, 'get') else config.MARIADB_ROOT_PASSWORD
+        self.host = config.get('MARIADB_HOST') if hasattr(config, 'get') else getattr(config, 'MARIADB_HOST')
+        self.port = config.get('MARIADB_PORT') if hasattr(config, 'get') else getattr(config, 'MARIADB_PORT')
+        self.root_password = config.get('MARIADB_ROOT_PASSWORD') if hasattr(config, 'get') else getattr(config, 'MARIADB_ROOT_PASSWORD')
+    
+    def _validate_identifier(self, identifier):
+        """Validate database/user identifier to prevent SQL injection"""
+        import re
+        if not re.match(r'^[a-zA-Z0-9_]+$', identifier):
+            raise ValueError(f"Invalid identifier: {identifier}")
+        return identifier
     
     def generate_password(self, length=16):
         """Generate a random password"""
@@ -309,6 +329,10 @@ class DatabaseManager:
     def create_database(self, db_name, db_user, db_password):
         """Create a new MariaDB database and user"""
         import pymysql
+        
+        # Validate identifiers to prevent SQL injection
+        db_name = self._validate_identifier(db_name)
+        db_user = self._validate_identifier(db_user)
         
         try:
             # Connect as root
@@ -320,16 +344,16 @@ class DatabaseManager:
             )
             
             with connection.cursor() as cursor:
-                # Create database
+                # Create database (identifier already validated)
                 cursor.execute(f"CREATE DATABASE IF NOT EXISTS `{db_name}`")
                 
-                # Create user
+                # Create user with parameterized password
                 cursor.execute(
                     f"CREATE USER IF NOT EXISTS '{db_user}'@'localhost' IDENTIFIED BY %s",
                     (db_password,)
                 )
                 
-                # Grant privileges
+                # Grant privileges (identifier already validated)
                 cursor.execute(
                     f"GRANT ALL PRIVILEGES ON `{db_name}`.* TO '{db_user}'@'localhost'"
                 )
@@ -346,6 +370,10 @@ class DatabaseManager:
         """Delete a MariaDB database and user"""
         import pymysql
         
+        # Validate identifiers to prevent SQL injection
+        db_name = self._validate_identifier(db_name)
+        db_user = self._validate_identifier(db_user)
+        
         try:
             connection = pymysql.connect(
                 host=self.host,
@@ -355,10 +383,10 @@ class DatabaseManager:
             )
             
             with connection.cursor() as cursor:
-                # Drop database
+                # Drop database (identifier already validated)
                 cursor.execute(f"DROP DATABASE IF EXISTS `{db_name}`")
                 
-                # Drop user
+                # Drop user (identifier already validated)
                 cursor.execute(f"DROP USER IF EXISTS '{db_user}'@'localhost'")
                 
                 cursor.execute("FLUSH PRIVILEGES")

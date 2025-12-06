@@ -204,24 +204,29 @@ create_admin_user() {
         exit 1
     fi
     
-    # Create admin user using Python
+    # Create admin user using Python with environment variable
     cd "$INSTALL_DIR"
     source venv/bin/activate
-    python3 << EOF
+    export ADMIN_USERNAME="$ADMIN_USER"
+    export ADMIN_PASSWORD="$ADMIN_PASS"
+    python3 << 'EOF'
 from database import Database
 from werkzeug.security import generate_password_hash
 import os
 
-db_path = os.path.join('$CONFIG_DIR', 'lalapanel.db')
+db_path = os.path.join(os.environ.get('CONFIG_DIR', '/etc/lalapanel'), 'lalapanel.db')
 db = Database(db_path)
 
 try:
-    password_hash = generate_password_hash('$ADMIN_PASS')
-    db.create_user('$ADMIN_USER', password_hash)
+    username = os.environ.get('ADMIN_USERNAME', 'admin')
+    password = os.environ.get('ADMIN_PASSWORD')
+    password_hash = generate_password_hash(password)
+    db.create_user(username, password_hash)
     print("Admin user created successfully")
 except Exception as e:
     print(f"Error creating admin user: {e}")
 EOF
+    unset ADMIN_PASSWORD
     deactivate
 }
 

@@ -155,8 +155,14 @@ def create_site():
             
             # Create database if requested
             if create_db:
-                db_name = domain.replace('.', '_').replace('-', '_')
-                db_user = f"user_{db_name[:10]}"
+                import hashlib
+                import time
+                
+                # Generate unique database name with hash to avoid conflicts
+                domain_base = domain.replace('.', '_').replace('-', '_')
+                hash_suffix = hashlib.md5(f"{domain}{time.time()}".encode()).hexdigest()[:6]
+                db_name = f"{domain_base}_{hash_suffix}"[:64]  # MySQL max identifier length
+                db_user = f"user_{hash_suffix}"
                 db_password = db_manager.generate_password()
                 
                 try:
