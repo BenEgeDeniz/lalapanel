@@ -62,6 +62,11 @@ body {
     border-bottom: 1px solid var(--border-color);
 }
 
+.card-header.bg-light {
+    background-color: var(--bg-tertiary) !important;
+    color: var(--text-primary);
+}
+
 .card-body {
     background-color: var(--bg-secondary);
 }
@@ -109,6 +114,33 @@ body {
 .btn-success {
     background-color: var(--success-color);
     border-color: var(--success-color);
+}
+
+.btn-outline-secondary {
+    color: var(--text-primary);
+    border-color: var(--border-color);
+}
+
+.btn-outline-secondary:hover {
+    background-color: var(--bg-tertiary);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+.btn-secondary {
+    background-color: var(--bg-tertiary);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+.btn-secondary:hover {
+    background-color: var(--bg-primary);
+    border-color: var(--border-color);
+    color: var(--text-primary);
+}
+
+.btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%);
 }
 
 /* Badges */
@@ -200,6 +232,24 @@ body {
     color: var(--text-secondary);
 }
 
+.form-text {
+    color: var(--text-secondary) !important;
+}
+
+.form-check-label {
+    color: var(--text-primary);
+}
+
+.form-check-input {
+    background-color: var(--bg-tertiary);
+    border-color: var(--border-color);
+}
+
+.form-check-input:checked {
+    background-color: var(--accent-color);
+    border-color: var(--accent-color);
+}
+
 /* Alerts */
 .alert {
     border: 1px solid var(--border-color);
@@ -266,6 +316,22 @@ body {
 /* Tables */
 .table {
     color: var(--text-primary);
+    --bs-table-bg: var(--bg-secondary);
+    --bs-table-color: var(--text-primary);
+}
+
+.table thead {
+    color: var(--text-primary);
+    border-color: var(--border-color);
+}
+
+.table tbody {
+    border-color: var(--border-color);
+}
+
+.table-hover tbody tr:hover {
+    background-color: var(--bg-tertiary);
+    color: var(--text-primary);
 }
 
 .table-dark {
@@ -273,6 +339,18 @@ body {
     --bs-table-striped-bg: var(--bg-tertiary);
     --bs-table-hover-bg: var(--bg-tertiary);
     border-color: var(--border-color);
+}
+
+.table th,
+.table td {
+    border-color: var(--border-color);
+}
+
+.table code {
+    color: var(--accent-color);
+    background-color: var(--bg-tertiary);
+    padding: 0.2rem 0.4rem;
+    border-radius: 0.25rem;
 }
 
 /* Modals */
@@ -290,6 +368,14 @@ body {
     color: var(--text-primary);
 }
 
+.modal-body {
+    color: var(--text-primary);
+}
+
+.modal-body small {
+    color: var(--text-secondary);
+}
+
 /* Text Colors */
 .text-muted {
     color: var(--text-secondary) !important;
@@ -297,6 +383,15 @@ body {
 
 .text-primary {
     color: var(--accent-color) !important;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    color: var(--text-primary);
+}
+
+code {
+    color: var(--accent-color);
+    background-color: var(--bg-tertiary);
 }
 
 /* Responsive */

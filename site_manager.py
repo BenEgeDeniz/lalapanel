@@ -345,6 +345,48 @@ server {{
         
         # Reload nginx
         subprocess.run(['/usr/bin/systemctl', 'reload', 'nginx'], check=True)
+    
+    def create_default_server_config(self):
+        """Create default server config to reject unknown domains"""
+        config_path = os.path.join(self.nginx_available, '000-default')
+        
+        config = """# Default server configuration for Lala Panel
+# This catches all requests to unknown domains and rejects them
+
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    server_name _;
+    
+    # Return 444 (connection closed without response) for unknown domains
+    return 444;
+}
+
+server {
+    listen 443 ssl default_server;
+    listen [::]:443 ssl default_server;
+    server_name _;
+    
+    # Use a self-signed certificate for the default SSL server
+    # This prevents SSL errors when accessing via IP
+    ssl_certificate /etc/ssl/certs/ssl-cert-snakeoil.pem;
+    ssl_certificate_key /etc/ssl/private/ssl-cert-snakeoil.key;
+    
+    # Return 444 (connection closed without response) for unknown domains
+    return 444;
+}
+"""
+        
+        # Write config file
+        with open(config_path, 'w') as f:
+            f.write(config)
+        
+        # Create symlink if it doesn't exist
+        enabled_path = os.path.join(self.nginx_enabled, '000-default')
+        if not os.path.exists(enabled_path):
+            os.symlink(config_path, enabled_path)
+        
+        return config_path
 
 
 class DatabaseManager:
@@ -488,7 +530,7 @@ class UserManager:
         
         # Set password
         proc = subprocess.Popen(
-            ['/usr/bin/chpasswd'],
+            ['/usr/sbin/chpasswd'],
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,

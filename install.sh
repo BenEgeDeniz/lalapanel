@@ -164,6 +164,37 @@ setup_nginx() {
     # Remove default site
     rm -f /etc/nginx/sites-enabled/default
     
+    # Create default catch-all server to reject unknown domains
+    cat > /etc/nginx/sites-available/000-default << 'EOF'
+# Default server configuration for Lala Panel
+# This catches all requests to unknown domains and rejects them
+
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    server_name _;
+    
+    # Return 444 (connection closed without response) for unknown domains
+    return 444;
+}
+
+server {
+    listen 443 ssl default_server;
+    listen [::]:443 ssl default_server;
+    server_name _;
+    
+    # Use a self-signed certificate for the default SSL server
+    ssl_certificate /etc/ssl/certs/ssl-cert-snakeoil.pem;
+    ssl_certificate_key /etc/ssl/private/ssl-cert-snakeoil.key;
+    
+    # Return 444 (connection closed without response) for unknown domains
+    return 444;
+}
+EOF
+    
+    # Enable the default catch-all server
+    ln -sf /etc/nginx/sites-available/000-default /etc/nginx/sites-enabled/000-default
+    
     # Create Nginx configuration for the panel
     cat > /etc/nginx/sites-available/lalapanel << 'EOF'
 server {
