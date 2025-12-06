@@ -6,7 +6,7 @@
     --bg-tertiary: #2d3139;
     --text-primary: #e4e6eb;
     --text-secondary: #b0b3b8;
-    --text-on-warning: #000000;
+    --badge-warning-text: #000000;
     --border-color: #3a3f47;
     --accent-color: #667eea;
     --accent-hover: #7c8fef;
@@ -123,7 +123,7 @@ body {
 
 .badge.bg-warning {
     background-color: var(--warning-color) !important;
-    color: var(--text-on-warning);
+    color: var(--badge-warning-text);
 }
 
 .badge.bg-danger {
@@ -305,4 +305,3 @@ body {
         grid-template-columns: 1fr;
     }
 }
-
