@@ -71,6 +71,18 @@ class Database:
                 )
             ''')
             
+            # FTP/SSH users table
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS ftp_users (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    site_id INTEGER,
+                    username TEXT UNIQUE NOT NULL,
+                    access_type TEXT DEFAULT 'ftp',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (site_id) REFERENCES sites (id) ON DELETE CASCADE
+                )
+            ''')
+            
             # Login attempts table for rate limiting
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS login_attempts (
@@ -215,3 +227,38 @@ class Database:
                 DELETE FROM login_attempts 
                 WHERE attempted_at < datetime('now', '-' || ? || ' hours')
             ''', (hours,))
+    
+    def create_ftp_user(self, site_id, username, access_type='ftp'):
+        """Create a FTP/SSH user record"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                'INSERT INTO ftp_users (site_id, username, access_type) VALUES (?, ?, ?)',
+                (site_id, username, access_type)
+            )
+            return cursor.lastrowid
+    
+    def get_all_ftp_users(self):
+        """Get all FTP/SSH users"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                SELECT f.*, s.domain 
+                FROM ftp_users f
+                LEFT JOIN sites s ON f.site_id = s.id
+                ORDER BY f.created_at DESC
+            ''')
+            return cursor.fetchall()
+    
+    def get_ftp_users_for_site(self, site_id):
+        """Get all FTP/SSH users for a site"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM ftp_users WHERE site_id = ?', (site_id,))
+            return cursor.fetchall()
+    
+    def delete_ftp_user(self, user_id):
+        """Delete a FTP/SSH user record"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('DELETE FROM ftp_users WHERE id = ?', (user_id,))

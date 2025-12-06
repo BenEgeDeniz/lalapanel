@@ -420,3 +420,86 @@ class DatabaseManager:
             
         except Exception as e:
             raise Exception(f"Database deletion failed: {str(e)}")
+
+
+class UserManager:
+    """Manages SSH/FTP users"""
+    
+    def __init__(self, config):
+        self.config = config
+        self.sites_dir = config.get('SITES_DIR') if hasattr(config, 'get') else getattr(config, 'SITES_DIR')
+    
+    def _validate_username(self, username):
+        """Validate username to prevent command injection"""
+        import re
+        if not re.match(r'^[a-z0-9_]+$', username):
+            raise ValueError(f"Invalid username: {username}")
+        if len(username) > 32:
+            raise ValueError("Username too long (max 32 characters)")
+        return username
+    
+    def create_ftp_user(self, username, password, site_domain, access_type='ftp'):
+        """Create a system user for FTP/SSH access"""
+        # Validate username
+        username = self._validate_username(username)
+        
+        # Check if user already exists
+        result = subprocess.run(['id', username], capture_output=True, text=True)
+        if result.returncode == 0:
+            raise Exception(f"User {username} already exists")
+        
+        # Site directory
+        site_dir = os.path.join(self.sites_dir, site_domain)
+        
+        if access_type == 'ssh':
+            # Create user with SSH access
+            subprocess.run([
+                '/usr/sbin/useradd',
+                '-m',  # Create home directory
+                '-d', site_dir,  # Set home to site directory
+                '-s', '/bin/bash',  # Shell access
+                username
+            ], check=True)
+        else:
+            # Create user with FTP only (restricted shell)
+            subprocess.run([
+                '/usr/sbin/useradd',
+                '-m',  # Create home directory
+                '-d', site_dir,  # Set home to site directory
+                '-s', '/usr/sbin/nologin',  # No shell access
+                username
+            ], check=True)
+        
+        # Set password
+        proc = subprocess.Popen(
+            ['/usr/bin/chpasswd'],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+        proc.communicate(input=f"{username}:{password}\n")
+        
+        if proc.returncode != 0:
+            # Clean up user if password setting failed
+            subprocess.run(['/usr/sbin/userdel', '-r', username], check=False)
+            raise Exception("Failed to set password")
+        
+        # Set proper permissions on site directory
+        subprocess.run(['/bin/chown', '-R', f'{username}:www-data', site_dir], check=True)
+        subprocess.run(['/bin/chmod', '-R', '750', site_dir], check=True)
+        
+        return True
+    
+    def delete_ftp_user(self, username):
+        """Delete a system user"""
+        # Validate username
+        username = self._validate_username(username)
+        
+        # Delete user and home directory
+        try:
+            subprocess.run(['/usr/sbin/userdel', '-r', username], check=True)
+            return True
+        except subprocess.CalledProcessError as e:
+            # User might not exist
+            return False

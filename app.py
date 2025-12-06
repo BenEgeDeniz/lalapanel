@@ -10,7 +10,7 @@ import secrets
 
 from config import Config
 from database import Database
-from site_manager import SiteManager, DatabaseManager
+from site_manager import SiteManager, DatabaseManager, UserManager
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -19,15 +19,17 @@ app.config.from_object(Config)
 db = None
 site_manager = None
 db_manager = None
+user_manager = None
 
 def init_components():
     """Initialize application components"""
-    global db, site_manager, db_manager
+    global db, site_manager, db_manager, user_manager
     if db is None:
         db = Database(app.config['DATABASE_PATH'])
         site_manager = SiteManager(app.config)
         db_manager = DatabaseManager(app.config)
-    return db, site_manager, db_manager
+        user_manager = UserManager(app.config)
+    return db, site_manager, db_manager, user_manager
 
 # Flask-Login setup
 login_manager = LoginManager()
@@ -417,6 +419,75 @@ def delete_database(db_id):
         flash(f'Error deleting database: {str(e)}', 'error')
     
     return redirect(url_for('databases'))
+
+@app.route('/users')
+@login_required
+def users():
+    """SSH/FTP user management page"""
+    init_components()
+    all_users = db.get_all_ftp_users()
+    sites = db.get_all_sites()
+    return render_template('users.html', ftp_users=all_users, sites=sites)
+
+@app.route('/users/create', methods=['POST'])
+@login_required
+def create_ftp_user():
+    """Create a new SSH/FTP user"""
+    init_components()
+    site_id = request.form.get('site_id')
+    username = request.form.get('username')
+    password = request.form.get('password')
+    access_type = request.form.get('access_type', 'ftp')
+    
+    if not site_id or not username or not password:
+        flash('All fields are required', 'error')
+        return redirect(url_for('users'))
+    
+    site = db.get_site(int(site_id))
+    if not site:
+        flash('Site not found', 'error')
+        return redirect(url_for('users'))
+    
+    try:
+        # Create system user
+        user_manager.create_ftp_user(username, password, site['domain'], access_type)
+        
+        # Create database record
+        db.create_ftp_user(int(site_id), username, access_type)
+        
+        flash(f'User {username} created successfully', 'success')
+    except Exception as e:
+        flash(f'Error creating user: {str(e)}', 'error')
+    
+    return redirect(url_for('users'))
+
+@app.route('/users/<int:user_id>/delete', methods=['POST'])
+@login_required
+def delete_ftp_user(user_id):
+    """Delete a SSH/FTP user"""
+    init_components()
+    user = None
+    with db.get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM ftp_users WHERE id = ?', (user_id,))
+        user = cursor.fetchone()
+    
+    if not user:
+        flash('User not found', 'error')
+        return redirect(url_for('users'))
+    
+    try:
+        # Delete system user
+        user_manager.delete_ftp_user(user['username'])
+        
+        # Delete database record
+        db.delete_ftp_user(user_id)
+        
+        flash(f'User {user["username"]} deleted successfully', 'success')
+    except Exception as e:
+        flash(f'Error deleting user: {str(e)}', 'error')
+    
+    return redirect(url_for('users'))
 
 if __name__ == '__main__':
     # Ensure directories exist
