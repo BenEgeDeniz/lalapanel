@@ -70,104 +70,57 @@
     
     <div class="col-lg-7">
         <div class="card">
-            <div class="card-header bg-light">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
                 <h5 class="mb-0"><i class="bi bi-people"></i> Existing Users</h5>
+                <span class="badge bg-secondary">{{ ftp_users|length }} user(s)</span>
             </div>
             <div class="card-body">
                 {% if ftp_users %}
                 <div class="table-responsive">
-                    <table class="table table-hover">
+                    <table class="table table-hover align-middle">
                         <thead>
                             <tr>
-                                <th>Username</th>
-                                <th>Site</th>
-                                <th>Access Type</th>
-                                <th>Created</th>
-                                <th>Actions</th>
+                                <th><i class="bi bi-person"></i> Username</th>
+                                <th><i class="bi bi-globe"></i> Site</th>
+                                <th><i class="bi bi-shield"></i> Access Type</th>
+                                <th><i class="bi bi-calendar"></i> Created</th>
+                                <th class="text-end">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for user in ftp_users %}
                             <tr>
-                                <td><code>{{ user['username'] }}</code></td>
+                                <td><code class="text-info">{{ user['username'] }}</code></td>
                                 <td>
-                                    <i class="bi bi-globe text-muted"></i>
-                                    {{ user['domain'] or 'N/A' }}
+                                    <span class="text-primary">{{ user['domain'] or 'N/A' }}</span>
                                 </td>
                                 <td>
                                     {% if user['access_type'] == 'ssh' %}
-                                    <span class="badge bg-primary">SSH + FTP</span>
+                                    <span class="badge bg-primary">
+                                        <i class="bi bi-terminal"></i> SSH + FTP
+                                    </span>
                                     {% else %}
-                                    <span class="badge bg-secondary">FTP Only</span>
+                                    <span class="badge bg-secondary">
+                                        <i class="bi bi-folder"></i> FTP Only
+                                    </span>
                                     {% endif %}
                                 </td>
-                                <td>{{ user['created_at'] }}</td>
-                                <td>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary" 
-                                            data-bs-toggle="modal" data-bs-target="#userModal{{ user['id'] }}">
-                                        <i class="bi bi-eye"></i> Info
+                                <td><small>{{ user['created_at'] }}</small></td>
+                                <td class="text-end">
+                                    <button type="button" class="btn btn-sm btn-outline-info" 
+                                            data-bs-toggle="modal" data-bs-target="#userModal{{ user['id'] }}"
+                                            title="View connection info">
+                                        <i class="bi bi-info-circle"></i> Info
                                     </button>
                                     <form method="POST" action="{{ url_for('delete_ftp_user', user_id=user['id']) }}" 
                                           style="display: inline;" 
-                                          onsubmit="return confirm('Delete user {{ user['username'] }}?');">
-                                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                                          data-confirm="⚠️ Are you sure you want to delete user {{ user['username']|e }}?&#10;&#10;This action cannot be undone!">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete user">
                                             <i class="bi bi-trash"></i>
                                         </button>
                                     </form>
                                 </td>
                             </tr>
-                            <!-- Modal for user details -->
-                            <div class="modal fade" id="userModal{{ user['id'] }}" tabindex="-1">
-                                <div class="modal-dialog">
-                                    <div class="modal-content">
-                                        <div class="modal-header">
-                                            <h5 class="modal-title">SSH/FTP User Details</h5>
-                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                        </div>
-                                        <div class="modal-body">
-                                            <table class="table table-sm">
-                                                <tr>
-                                                    <th width="40%">Username:</th>
-                                                    <td><code>{{ user['username'] }}</code></td>
-                                                </tr>
-                                                <tr>
-                                                    <th>Site Directory:</th>
-                                                    <td><code>/var/www/{{ user['domain'] }}</code></td>
-                                                </tr>
-                                                <tr>
-                                                    <th>Access Type:</th>
-                                                    <td>
-                                                        {% if user['access_type'] == 'ssh' %}
-                                                        SSH + SFTP
-                                                        {% else %}
-                                                        SFTP Only
-                                                        {% endif %}
-                                                    </td>
-                                                </tr>
-                                                <tr>
-                                                    <th>Connection Info:</th>
-                                                    <td>
-                                                        <code>sftp {{ user['username'] }}@{{ request.host.split(':')[0] }}</code>
-                                                    </td>
-                                                </tr>
-                                                <tr>
-                                                    <th>Created:</th>
-                                                    <td>{{ user['created_at'] }}</td>
-                                                </tr>
-                                            </table>
-                                            <div class="alert alert-info mt-3">
-                                                <small>
-                                                    <i class="bi bi-info-circle"></i>
-                                                    Use SFTP client (FileZilla, WinSCP, etc.) to connect
-                                                </small>
-                                            </div>
-                                        </div>
-                                        <div class="modal-footer">
-                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
                             {% endfor %}
                         </tbody>
                     </table>
@@ -177,7 +130,7 @@
                     <div class="display-1 mb-3">
                         <i class="bi bi-person-lock text-muted"></i>
                     </div>
-                    <h5>No SSH/FTP users yet</h5>
+                    <h5 class="text-muted">No SSH/FTP users yet</h5>
                     <p class="text-muted">Create your first user to manage site files</p>
                 </div>
                 {% endif %}
@@ -185,6 +138,98 @@
         </div>
     </div>
 </div>
+
+<!-- User Info Modals -->
+{% for user in ftp_users %}
+<div class="modal fade" id="userModal{{ user['id'] }}" tabindex="-1" aria-labelledby="userModalLabel{{ user['id'] }}" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="userModalLabel{{ user['id'] }}">
+                    <i class="bi bi-person-lock"></i> SSH/FTP User Details
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning mb-3">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <small><strong>Important:</strong> Passwords are not stored in the panel for security reasons. 
+                    If you forgot the password, please delete this user and create a new one.</small>
+                </div>
+                <table class="table table-sm mb-3">
+                    <tbody>
+                        <tr>
+                            <th width="35%" class="text-muted">Username:</th>
+                            <td>
+                                <code class="text-info">{{ user['username'] }}</code>
+                                <button class="btn btn-sm btn-link p-0 ms-2" data-copy="{{ user['username']|e }}" title="Copy to clipboard">
+                                    <i class="bi bi-clipboard"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted">Site Directory:</th>
+                            <td>
+                                <code>/var/www/{{ user['domain'] }}</code>
+                                <button class="btn btn-sm btn-link p-0 ms-2" data-copy="/var/www/{{ user['domain']|e }}" title="Copy to clipboard">
+                                    <i class="bi bi-clipboard"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted">Access Type:</th>
+                            <td>
+                                {% if user['access_type'] == 'ssh' %}
+                                <span class="badge bg-primary">
+                                    <i class="bi bi-terminal"></i> SSH + SFTP
+                                </span>
+                                {% else %}
+                                <span class="badge bg-secondary">
+                                    <i class="bi bi-folder"></i> SFTP Only
+                                </span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted">Created:</th>
+                            <td><small>{{ user['created_at'] }}</small></td>
+                        </tr>
+                    </tbody>
+                </table>
+                
+                <h6 class="mb-2"><i class="bi bi-link-45deg"></i> Connection Information</h6>
+                <div class="bg-dark p-3 rounded">
+                    <p class="mb-2 small text-muted"><strong>SFTP Connection:</strong></p>
+                    <code class="text-success">sftp {{ user['username'] }}@{{ request.host.split(':')[0] }}</code>
+                    <button class="btn btn-sm btn-link p-0 ms-2" data-copy="sftp {{ user['username']|e }}@{{ request.host.split(':')[0]|e }}" title="Copy to clipboard">
+                        <i class="bi bi-clipboard"></i>
+                    </button>
+                    
+                    {% if user['access_type'] == 'ssh' %}
+                    <p class="mb-2 mt-3 small text-muted"><strong>SSH Connection:</strong></p>
+                    <code class="text-success">ssh {{ user['username'] }}@{{ request.host.split(':')[0] }}</code>
+                    <button class="btn btn-sm btn-link p-0 ms-2" data-copy="ssh {{ user['username']|e }}@{{ request.host.split(':')[0]|e }}" title="Copy to clipboard">
+                        <i class="bi bi-clipboard"></i>
+                    </button>
+                    {% endif %}
+                </div>
+                
+                <div class="alert alert-info mt-3 mb-0">
+                    <small>
+                        <i class="bi bi-info-circle"></i>
+                        <strong>Recommended Clients:</strong> FileZilla, WinSCP, Cyberduck
+                    </small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle"></i> Close
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
 
 <div class="row mt-4">
     <div class="col-12">
