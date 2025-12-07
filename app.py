@@ -756,6 +756,261 @@ def create_folder(site_id):
     except Exception as e:
         return jsonify({'error': f'Failed to create folder: {str(e)}'}), 500
 
+@app.route('/files/rename/<int:site_id>', methods=['POST'])
+@login_required
+def rename_file(site_id):
+    """Rename a file or folder"""
+    init_components()
+    site = db.get_site(site_id)
+    if not site:
+        return jsonify({'error': 'Site not found'}), 404
+    
+    old_path = request.form.get('old_path', '')
+    new_name = request.form.get('new_name', '')
+    
+    # Security checks
+    if '..' in old_path or old_path.startswith('/') or not old_path:
+        return jsonify({'error': 'Invalid path'}), 400
+    
+    if not new_name or '..' in new_name or '/' in new_name:
+        return jsonify({'error': 'Invalid new name'}), 400
+    
+    # Build paths
+    base_path = os.path.join(app.config['SITES_DIR'], site['domain'], 'htdocs')
+    old_full_path = os.path.join(base_path, old_path)
+    
+    # Get parent directory and construct new path
+    parent_dir = os.path.dirname(old_full_path)
+    new_full_path = os.path.join(parent_dir, new_name)
+    
+    # Validate paths
+    try:
+        old_full_path = os.path.realpath(old_full_path)
+        new_full_path = os.path.realpath(new_full_path)
+        base_path = os.path.realpath(base_path)
+        
+        if not old_full_path.startswith(base_path) or not new_full_path.startswith(base_path):
+            return jsonify({'error': 'Access denied'}), 403
+    except:
+        return jsonify({'error': 'Invalid path'}), 400
+    
+    if not os.path.exists(old_full_path):
+        return jsonify({'error': 'File not found'}), 404
+    
+    if os.path.exists(new_full_path):
+        return jsonify({'error': 'A file with that name already exists'}), 400
+    
+    # Rename
+    try:
+        os.rename(old_full_path, new_full_path)
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'error': f'Rename failed: {str(e)}'}), 500
+
+@app.route('/files/edit/<int:site_id>')
+@login_required
+def get_file_content(site_id):
+    """Get file content for editing"""
+    init_components()
+    site = db.get_site(site_id)
+    if not site:
+        return jsonify({'error': 'Site not found'}), 404
+    
+    rel_path = request.args.get('path', '')
+    
+    # Security check
+    if '..' in rel_path or rel_path.startswith('/') or not rel_path:
+        return jsonify({'error': 'Invalid path'}), 400
+    
+    # Build full path
+    base_path = os.path.join(app.config['SITES_DIR'], site['domain'], 'htdocs')
+    full_path = os.path.join(base_path, rel_path)
+    
+    # Validate path
+    try:
+        full_path = os.path.realpath(full_path)
+        base_path = os.path.realpath(base_path)
+        if not full_path.startswith(base_path):
+            return jsonify({'error': 'Access denied'}), 403
+    except:
+        return jsonify({'error': 'Invalid path'}), 400
+    
+    if not os.path.exists(full_path) or not os.path.isfile(full_path):
+        return jsonify({'error': 'File not found'}), 404
+    
+    # Read file content
+    try:
+        # Check file size (limit to 5MB for editing)
+        if os.path.getsize(full_path) > 5 * 1024 * 1024:
+            return jsonify({'error': 'File too large to edit (max 5MB)'}), 400
+        
+        with open(full_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        return jsonify({'success': True, 'content': content, 'path': rel_path})
+    except UnicodeDecodeError:
+        return jsonify({'error': 'File is not a text file'}), 400
+    except Exception as e:
+        return jsonify({'error': f'Failed to read file: {str(e)}'}), 500
+
+@app.route('/files/save/<int:site_id>', methods=['POST'])
+@login_required
+def save_file_content(site_id):
+    """Save edited file content"""
+    init_components()
+    site = db.get_site(site_id)
+    if not site:
+        return jsonify({'error': 'Site not found'}), 404
+    
+    rel_path = request.form.get('path', '')
+    content = request.form.get('content', '')
+    
+    # Security check
+    if '..' in rel_path or rel_path.startswith('/') or not rel_path:
+        return jsonify({'error': 'Invalid path'}), 400
+    
+    # Build full path
+    base_path = os.path.join(app.config['SITES_DIR'], site['domain'], 'htdocs')
+    full_path = os.path.join(base_path, rel_path)
+    
+    # Validate path
+    try:
+        full_path = os.path.realpath(full_path)
+        base_path = os.path.realpath(base_path)
+        if not full_path.startswith(base_path):
+            return jsonify({'error': 'Access denied'}), 403
+    except:
+        return jsonify({'error': 'Invalid path'}), 400
+    
+    if not os.path.exists(full_path) or not os.path.isfile(full_path):
+        return jsonify({'error': 'File not found'}), 404
+    
+    # Save file
+    try:
+        with open(full_path, 'w', encoding='utf-8') as f:
+            f.write(content)
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'error': f'Failed to save file: {str(e)}'}), 500
+
+@app.route('/files/compress/<int:site_id>', methods=['POST'])
+@login_required
+def compress_files(site_id):
+    """Compress files/folders to a zip archive"""
+    init_components()
+    site = db.get_site(site_id)
+    if not site:
+        return jsonify({'error': 'Site not found'}), 404
+    
+    import zipfile
+    
+    paths = request.form.getlist('paths[]')
+    archive_name = request.form.get('archive_name', 'archive.zip')
+    current_path = request.form.get('current_path', '')
+    
+    # Ensure archive name ends with .zip
+    if not archive_name.endswith('.zip'):
+        archive_name += '.zip'
+    
+    # Security checks
+    for path in paths:
+        if '..' in path or path.startswith('/'):
+            return jsonify({'error': 'Invalid path'}), 400
+    
+    if '..' in current_path or current_path.startswith('/'):
+        return jsonify({'error': 'Invalid path'}), 400
+    
+    if '..' in archive_name or '/' in archive_name:
+        return jsonify({'error': 'Invalid archive name'}), 400
+    
+    # Build paths
+    base_path = os.path.join(app.config['SITES_DIR'], site['domain'], 'htdocs')
+    archive_path = os.path.join(base_path, current_path, archive_name) if current_path else os.path.join(base_path, archive_name)
+    
+    # Create zip file
+    try:
+        with zipfile.ZipFile(archive_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            for rel_path in paths:
+                full_path = os.path.join(base_path, rel_path)
+                
+                # Validate path
+                full_path = os.path.realpath(full_path)
+                base_path_real = os.path.realpath(base_path)
+                if not full_path.startswith(base_path_real):
+                    return jsonify({'error': 'Access denied'}), 403
+                
+                if not os.path.exists(full_path):
+                    continue
+                
+                # Add to zip
+                if os.path.isfile(full_path):
+                    zipf.write(full_path, os.path.basename(full_path))
+                elif os.path.isdir(full_path):
+                    for root, dirs, files in os.walk(full_path):
+                        for file in files:
+                            file_path = os.path.join(root, file)
+                            arcname = os.path.relpath(file_path, os.path.dirname(full_path))
+                            zipf.write(file_path, arcname)
+        
+        return jsonify({'success': True, 'archive_name': archive_name})
+    except Exception as e:
+        return jsonify({'error': f'Compression failed: {str(e)}'}), 500
+
+@app.route('/files/extract/<int:site_id>', methods=['POST'])
+@login_required
+def extract_archive(site_id):
+    """Extract a zip archive"""
+    init_components()
+    site = db.get_site(site_id)
+    if not site:
+        return jsonify({'error': 'Site not found'}), 404
+    
+    import zipfile
+    
+    archive_path = request.form.get('path', '')
+    
+    # Security check
+    if '..' in archive_path or archive_path.startswith('/') or not archive_path:
+        return jsonify({'error': 'Invalid path'}), 400
+    
+    # Build paths
+    base_path = os.path.join(app.config['SITES_DIR'], site['domain'], 'htdocs')
+    full_archive_path = os.path.join(base_path, archive_path)
+    
+    # Validate path
+    try:
+        full_archive_path = os.path.realpath(full_archive_path)
+        base_path = os.path.realpath(base_path)
+        if not full_archive_path.startswith(base_path):
+            return jsonify({'error': 'Access denied'}), 403
+    except:
+        return jsonify({'error': 'Invalid path'}), 400
+    
+    if not os.path.exists(full_archive_path) or not os.path.isfile(full_archive_path):
+        return jsonify({'error': 'Archive not found'}), 404
+    
+    # Extract to same directory as archive
+    extract_dir = os.path.dirname(full_archive_path)
+    
+    try:
+        with zipfile.ZipFile(full_archive_path, 'r') as zipf:
+            # Security check: validate all paths in archive
+            for member in zipf.namelist():
+                member_path = os.path.join(extract_dir, member)
+                member_path = os.path.realpath(member_path)
+                if not member_path.startswith(base_path):
+                    return jsonify({'error': 'Archive contains invalid paths'}), 400
+            
+            # Extract
+            zipf.extractall(extract_dir)
+        
+        return jsonify({'success': True})
+    except zipfile.BadZipFile:
+        return jsonify({'error': 'Invalid or corrupted zip file'}), 400
+    except Exception as e:
+        return jsonify({'error': f'Extraction failed: {str(e)}'}), 500
+
 @app.route('/system/info')
 @login_required
 def system_info():

@@ -53,6 +53,9 @@
                         <button class="btn btn-sm btn-primary" id="new-folder-btn">
                             <i class="bi bi-folder-plus"></i> New Folder
                         </button>
+                        <button class="btn btn-sm btn-success" id="compress-btn" style="display: none;">
+                            <i class="bi bi-file-zip"></i> Compress Selected
+                        </button>
                     </div>
                 </div>
                 <div class="mt-2">
@@ -74,10 +77,11 @@
                         <table class="table table-hover mb-0" id="file-list">
                             <thead>
                                 <tr>
-                                    <th width="50%">Name</th>
+                                    <th width="5%"><input type="checkbox" id="select-all"></th>
+                                    <th width="45%">Name</th>
                                     <th width="15%">Size</th>
-                                    <th width="20%">Modified</th>
-                                    <th width="15%">Actions</th>
+                                    <th width="15%">Modified</th>
+                                    <th width="20%">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -152,6 +156,76 @@
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <button type="button" class="btn btn-primary" id="folder-submit">Create</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Rename Modal -->
+<div class="modal fade" id="renameModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Rename</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="rename-form">
+                    <div class="mb-3">
+                        <label for="new-name" class="form-label">New Name</label>
+                        <input type="text" class="form-control" id="new-name" name="new_name" required>
+                    </div>
+                    <input type="hidden" id="rename-old-path">
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="rename-submit">Rename</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit File Modal -->
+<div class="modal fade" id="editModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit File: <span id="edit-file-name"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <textarea class="form-control" id="file-content" rows="20" style="font-family: monospace;"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="save-file">Save Changes</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Compress Modal -->
+<div class="modal fade" id="compressModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Create ZIP Archive</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="compress-form">
+                    <div class="mb-3">
+                        <label for="archive-name" class="form-label">Archive Name</label>
+                        <input type="text" class="form-control" id="archive-name" 
+                               name="archive_name" value="archive.zip" required>
+                        <div class="form-text">Enter name for the zip file</div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="compress-submit">Create Archive</button>
             </div>
         </div>
     </div>
@@ -272,6 +346,112 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('Failed to create folder: ' + error);
         });
     });
+    
+    // Compress button
+    document.getElementById('compress-btn').addEventListener('click', function() {
+        if (!currentSiteId) return;
+        new bootstrap.Modal(document.getElementById('compressModal')).show();
+    });
+    
+    // Compress submit
+    document.getElementById('compress-submit').addEventListener('click', function() {
+        if (!currentSiteId) return;
+        
+        const archiveName = document.getElementById('archive-name').value;
+        const selected = Array.from(document.querySelectorAll('.file-checkbox:checked'))
+            .map(cb => cb.dataset.path);
+        
+        if (selected.length === 0) {
+            alert('No files selected');
+            return;
+        }
+        
+        const formData = new FormData();
+        selected.forEach(path => formData.append('paths[]', path));
+        formData.append('archive_name', archiveName);
+        formData.append('current_path', currentPath);
+        
+        fetch(`/files/compress/${currentSiteId}`, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                bootstrap.Modal.getInstance(document.getElementById('compressModal')).hide();
+                document.getElementById('compress-form').reset();
+                loadDirectory(currentPath);
+            } else {
+                alert('Compression failed: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('Compression failed: ' + error);
+        });
+    });
+    
+    // Rename submit
+    document.getElementById('rename-submit').addEventListener('click', function() {
+        if (!currentSiteId) return;
+        
+        const oldPath = document.getElementById('rename-old-path').value;
+        const newName = document.getElementById('new-name').value;
+        
+        if (!newName) {
+            alert('Please enter a new name');
+            return;
+        }
+        
+        const formData = new FormData();
+        formData.append('old_path', oldPath);
+        formData.append('new_name', newName);
+        
+        fetch(`/files/rename/${currentSiteId}`, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                bootstrap.Modal.getInstance(document.getElementById('renameModal')).hide();
+                loadDirectory(currentPath);
+            } else {
+                alert('Rename failed: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('Rename failed: ' + error);
+        });
+    });
+    
+    // Save file
+    document.getElementById('save-file').addEventListener('click', function() {
+        if (!currentSiteId) return;
+        
+        const content = document.getElementById('file-content').value;
+        const path = document.getElementById('file-content').dataset.path;
+        
+        const formData = new FormData();
+        formData.append('path', path);
+        formData.append('content', content);
+        
+        fetch(`/files/save/${currentSiteId}`, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
+                alert('File saved successfully');
+            } else {
+                alert('Save failed: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('Save failed: ' + error);
+        });
+    });
 });
 
 function loadDirectory(path) {
@@ -342,6 +522,12 @@ function renderFileList(items) {
         const row = document.createElement('tr');
         
         const icon = item.is_dir ? 'bi-folder-fill' : 'bi-file-earmark';
+        const isZip = item.name.endsWith('.zip');
+        
+        const checkboxCell = `
+            <td><input type="checkbox" class="file-checkbox" data-path="${escapeHtml(item.path)}"></td>
+        `;
+        
         const nameCell = `
             <td>
                 <i class="bi ${icon}"></i>
@@ -361,9 +547,24 @@ function renderFileList(items) {
                     `<a href="/files/download/${currentSiteId}?path=${encodeURIComponent(item.path)}" 
                         class="btn btn-sm btn-outline-primary" title="Download">
                         <i class="bi bi-download"></i>
-                    </a>` : 
+                    </a>
+                    <button onclick="editFile('${escapeHtml(item.path)}', '${escapeHtml(item.name)}')" 
+                            class="btn btn-sm btn-outline-info" title="Edit">
+                        <i class="bi bi-pencil"></i>
+                    </button>` : 
                     ''
                 }
+                ${isZip && !item.is_dir ? 
+                    `<button onclick="extractZip('${escapeHtml(item.path)}')" 
+                            class="btn btn-sm btn-outline-success" title="Extract">
+                        <i class="bi bi-file-zip"></i>
+                    </button>` : 
+                    ''
+                }
+                <button onclick="renameItem('${escapeHtml(item.path)}', '${escapeHtml(item.name)}')" 
+                        class="btn btn-sm btn-outline-warning" title="Rename">
+                    <i class="bi bi-pencil-square"></i>
+                </button>
                 <button onclick="deleteItem('${escapeHtml(item.path)}', ${item.is_dir})" 
                         class="btn btn-sm btn-outline-danger" title="Delete">
                     <i class="bi bi-trash"></i>
@@ -371,8 +572,85 @@ function renderFileList(items) {
             </td>
         `;
         
-        row.innerHTML = nameCell + sizeCell + modifiedCell + actionsCell;
+        row.innerHTML = checkboxCell + nameCell + sizeCell + modifiedCell + actionsCell;
         tbody.appendChild(row);
+    });
+    
+    // Setup select all checkbox
+    document.getElementById('select-all').addEventListener('change', function() {
+        const checkboxes = document.querySelectorAll('.file-checkbox');
+        checkboxes.forEach(cb => cb.checked = this.checked);
+        updateCompressButton();
+    });
+    
+    // Setup individual checkboxes
+    document.querySelectorAll('.file-checkbox').forEach(cb => {
+        cb.addEventListener('change', updateCompressButton);
+    });
+}
+
+function updateCompressButton() {
+    const checkedCount = document.querySelectorAll('.file-checkbox:checked').length;
+    const compressBtn = document.getElementById('compress-btn');
+    if (checkedCount > 0) {
+        compressBtn.style.display = 'inline-block';
+    } else {
+        compressBtn.style.display = 'none';
+    }
+}
+
+function renameItem(oldPath, oldName) {
+    document.getElementById('rename-old-path').value = oldPath;
+    document.getElementById('new-name').value = oldName;
+    new bootstrap.Modal(document.getElementById('renameModal')).show();
+}
+
+function editFile(path, name) {
+    document.getElementById('edit-file-name').textContent = name;
+    const modal = new bootstrap.Modal(document.getElementById('editModal'));
+    modal.show();
+    
+    // Load file content
+    fetch(`/files/edit/${currentSiteId}?path=${encodeURIComponent(path)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('file-content').value = data.content;
+                document.getElementById('file-content').dataset.path = path;
+            } else {
+                alert('Failed to load file: ' + data.error);
+                modal.hide();
+            }
+        })
+        .catch(error => {
+            alert('Failed to load file: ' + error);
+            modal.hide();
+        });
+}
+
+function extractZip(path) {
+    if (!confirm('Extract this ZIP archive?')) {
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('path', path);
+    
+    fetch(`/files/extract/${currentSiteId}`, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Archive extracted successfully');
+            loadDirectory(currentPath);
+        } else {
+            alert('Extraction failed: ' + data.error);
+        }
+    })
+    .catch(error => {
+        alert('Extraction failed: ' + error);
     });
 }
 
