@@ -438,9 +438,9 @@ server {{
         config_path = os.path.join(self.nginx_available, 'lalapanel')
         panel_port = self._get_config_value('PANEL_PORT')
         
-        # Create webroot directory for ACME challenges
+        # Create webroot directory for ACME challenges with proper permissions
         panel_webroot = os.path.join(self.sites_dir, '_panel')
-        os.makedirs(os.path.join(panel_webroot, '.well-known', 'acme-challenge'), exist_ok=True)
+        os.makedirs(os.path.join(panel_webroot, '.well-known', 'acme-challenge'), mode=0o755, exist_ok=True)
         
         server_name = panel_domain if panel_domain else '_'
         
@@ -479,7 +479,7 @@ server {{
     
     # SSL settings
     ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_ciphers ECDHE+AESGCM:ECDHE+CHACHA20:DHE+AESGCM:DHE+CHACHA20:!aNULL:!MD5:!DSS;
+    ssl_ciphers ECDHE+AESGCM:ECDHE+CHACHA20:!DHE:!aNULL:!MD5:!DSS;
     ssl_prefer_server_ciphers on;
     ssl_session_cache shared:SSL:10m;
     ssl_session_timeout 1d;

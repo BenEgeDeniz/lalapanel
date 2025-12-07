@@ -1465,8 +1465,9 @@ def request_panel_ssl():
         if panel_webroot:
             try:
                 site_manager.create_panel_nginx_config(panel_domain, ssl_enabled=False)
-            except:
-                pass  # Ignore errors during cleanup
+            except Exception as cleanup_error:
+                # Log cleanup error but don't fail the overall operation
+                app.logger.warning(f'Failed to revert nginx config during cleanup: {cleanup_error}')
         flash(f'Error requesting SSL certificate: {str(e)}', 'error')
     
     return redirect(url_for('panel_settings'))
