@@ -57,7 +57,7 @@ def init_components():
     global db, site_manager, db_manager, user_manager
     if db is None:
         db = Database(app.config['DATABASE_PATH'])
-        site_manager = SiteManager(app.config)
+        site_manager = SiteManager(app.config, db)
         db_manager = DatabaseManager(app.config)
         user_manager = UserManager(app.config)
     return db, site_manager, db_manager, user_manager
@@ -1540,6 +1540,10 @@ if __name__ == '__main__':
     # Clean old login attempts on startup
     db.clear_old_login_attempts()
     
+    # Get panel port from database settings if available, otherwise use config default
+    panel_port = db.get_panel_port(app.config['PANEL_PORT'])
+    
+    print(f"Starting Lala Panel on {app.config['PANEL_HOST']}:{panel_port}")
     app.run(host=app.config['PANEL_HOST'], 
-            port=app.config['PANEL_PORT'], 
+            port=panel_port, 
             debug=False)

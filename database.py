@@ -3,8 +3,11 @@ Database models for Lala Panel
 """
 import sqlite3
 import os
+import logging
 from datetime import datetime
 from contextlib import contextmanager
+
+logger = logging.getLogger(__name__)
 
 class Database:
     """Database handler for Lala Panel"""
@@ -309,4 +312,22 @@ class Database:
             cursor.execute('SELECT setting_key, setting_value FROM panel_settings')
             rows = cursor.fetchall()
             return {row['setting_key']: row['setting_value'] for row in rows}
+    
+    def get_panel_port(self, default_port=8080):
+        """Get panel port from settings with fallback to default
+        
+        Args:
+            default_port (int): Default port to use if no setting exists or conversion fails
+            
+        Returns:
+            int: The panel port from settings or the default
+        """
+        db_port = self.get_panel_setting('panel_port')
+        if db_port:
+            try:
+                return int(db_port)
+            except (ValueError, TypeError):
+                # If conversion fails, log a warning and use the default
+                logger.warning(f"Invalid panel port value in database: '{db_port}'. Using default port {default_port}")
+        return default_port
 
