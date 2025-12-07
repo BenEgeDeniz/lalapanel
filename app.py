@@ -1335,6 +1335,102 @@ def get_service_status(service_name):
     except:
         return False
 
+@app.route('/settings')
+@login_required
+def panel_settings():
+    """Panel settings page"""
+    init_components()
+    settings = db.get_all_panel_settings()
+    return render_template('panel_settings.html', settings=settings)
+
+@app.route('/settings/save', methods=['POST'])
+@login_required
+def save_panel_settings():
+    """Save panel settings"""
+    init_components()
+    
+    panel_domain = request.form.get('panel_domain', '').strip()
+    panel_port = request.form.get('panel_port', '8080')
+    
+    try:
+        # Validate port
+        port = int(panel_port)
+        if port < 1 or port > 65535:
+            flash('Invalid port number (must be between 1 and 65535)', 'error')
+            return redirect(url_for('panel_settings'))
+        
+        # Save settings
+        db.set_panel_setting('panel_domain', panel_domain)
+        db.set_panel_setting('panel_port', str(port))
+        
+        flash('Panel settings saved. Restart the panel service to apply changes.', 'success')
+    except ValueError:
+        flash('Invalid port number', 'error')
+    except Exception as e:
+        flash(f'Error saving settings: {str(e)}', 'error')
+    
+    return redirect(url_for('panel_settings'))
+
+@app.route('/settings/ssl/request', methods=['POST'])
+@login_required
+def request_panel_ssl():
+    """Request SSL certificate for panel domain"""
+    init_components()
+    
+    panel_domain = db.get_panel_setting('panel_domain')
+    if not panel_domain:
+        flash('Panel domain not set', 'error')
+        return redirect(url_for('panel_settings'))
+    
+    try:
+        # Request SSL certificate (domain only, no www)
+        site_manager.request_ssl_certificate(panel_domain, include_www=False)
+        
+        # Mark SSL as enabled
+        db.set_panel_setting('panel_ssl_enabled', '1')
+        
+        flash(f'SSL certificate obtained successfully for {panel_domain}', 'success')
+    except Exception as e:
+        flash(f'Error requesting SSL certificate: {str(e)}', 'error')
+    
+    return redirect(url_for('panel_settings'))
+
+@app.route('/settings/ssl/disable', methods=['POST'])
+@login_required
+def disable_panel_ssl():
+    """Disable SSL for panel"""
+    init_components()
+    
+    try:
+        db.set_panel_setting('panel_ssl_enabled', '0')
+        flash('SSL disabled for panel. Restart panel service to apply changes.', 'success')
+    except Exception as e:
+        flash(f'Error disabling SSL: {str(e)}', 'error')
+    
+    return redirect(url_for('panel_settings'))
+
+@app.route('/settings/restart-panel', methods=['POST'])
+@login_required
+def restart_panel_service():
+    """Restart the panel service"""
+    init_components()
+    
+    try:
+        # Restart lalapanel service
+        subprocess.run(
+            ['/usr/bin/systemctl', 'restart', 'lalapanel'],
+            check=True,
+            capture_output=True,
+            text=True
+        )
+        flash('Panel service restarted successfully', 'success')
+    except subprocess.CalledProcessError as e:
+        flash(f'Failed to restart panel: {e.stderr}', 'error')
+    except Exception as e:
+        flash(f'Error restarting panel: {str(e)}', 'error')
+    
+    return redirect(url_for('panel_settings'))
+
 if __name__ == '__main__':
     # Ensure directories exist
     try:

@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+
+{% block title %}Panel Settings - Lala Panel{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h2">
+        <i class="bi bi-sliders"></i> Panel Settings
+    </h1>
+    <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Dashboard
+    </a>
+</div>
+
+<div class="row g-3">
+    <div class="col-12">
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i>
+            Configure your Lala Panel settings. Changes to domain and port require a panel restart to take effect.
+        </div>
+    </div>
+    
+    <!-- Panel Access Settings -->
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="bi bi-globe"></i> Panel Access</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('save_panel_settings') }}">
+                    <div class="mb-3">
+                        <label for="panel_domain" class="form-label">Panel Domain</label>
+                        <input type="text" id="panel_domain" name="panel_domain" class="form-control" 
+                               value="{{ settings.panel_domain }}" placeholder="panel.example.com">
+                        <div class="form-text">
+                            Optional: Set a custom domain for the panel. Leave empty to access via IP:PORT.
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="panel_port" class="form-label">Panel Port</label>
+                        <input type="number" id="panel_port" name="panel_port" class="form-control" 
+                               value="{{ settings.panel_port }}" min="1" max="65535" required>
+                        <div class="form-text">
+                            Port number for the panel (1-65535). Default is 8080.
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-save"></i> Save Settings
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- SSL Configuration -->
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="bi bi-shield-lock"></i> Panel SSL</h5>
+            </div>
+            <div class="card-body">
+                {% if settings.panel_ssl_enabled == '1' %}
+                <div class="alert alert-success">
+                    <i class="bi bi-check-circle"></i> SSL is enabled for the panel
+                </div>
+                <p class="text-muted">Current domain: <code>{{ settings.panel_domain }}</code></p>
+                <form method="POST" action="{{ url_for('disable_panel_ssl') }}">
+                    <button type="submit" class="btn btn-warning" 
+                            onclick="return confirm('Disable SSL for the panel?')">
+                        <i class="bi bi-shield-x"></i> Disable SSL
+                    </button>
+                </form>
+                {% else %}
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle"></i> SSL is not configured for the panel
+                </div>
+                
+                {% if settings.panel_domain %}
+                <p class="text-muted mb-3">
+                    You can request a free SSL certificate from Let's Encrypt for your panel domain.
+                </p>
+                <form method="POST" action="{{ url_for('request_panel_ssl') }}">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-lock"></i> Request SSL Certificate
+                    </button>
+                </form>
+                {% else %}
+                <p class="text-muted">
+                    Set a panel domain above to enable SSL configuration.
+                </p>
+                {% endif %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- System Service Management -->
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="bi bi-arrow-repeat"></i> Panel Service</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-3">
+                    After changing the panel domain or port, you need to restart the panel service for changes to take effect.
+                </p>
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <strong>Note:</strong> Restarting the panel will disconnect you. 
+                    Wait about 10 seconds then access the panel via the new domain/port.
+                </div>
+                <form method="POST" action="{{ url_for('restart_panel_service') }}" 
+                      data-confirm="⚠️ This will restart the panel and disconnect you!&#10;&#10;Make sure you know the new access URL before proceeding.">
+                    <button type="submit" class="btn btn-warning">
+                        <i class="bi bi-arrow-repeat"></i> Restart Panel Service
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Current Settings Info -->
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="bi bi-info-circle"></i> Current Panel Configuration</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <tbody>
+                        <tr>
+                            <th width="30%">Access URL:</th>
+                            <td>
+                                {% if settings.panel_domain %}
+                                <code>{% if settings.panel_ssl_enabled == '1' %}https{% else %}http{% endif %}://{{ settings.panel_domain }}{% if settings.panel_port not in ['80', '443'] %}:{{ settings.panel_port }}{% endif %}</code>
+                                {% else %}
+                                <code>http://SERVER_IP:{{ settings.panel_port }}</code>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Panel Domain:</th>
+                            <td><code>{{ settings.panel_domain if settings.panel_domain else 'Not set' }}</code></td>
+                        </tr>
+                        <tr>
+                            <th>Panel Port:</th>
+                            <td><code>{{ settings.panel_port }}</code></td>
+                        </tr>
+                        <tr>
+                            <th>SSL Status:</th>
+                            <td>
+                                {% if settings.panel_ssl_enabled == '1' %}
+                                <span class="badge bg-success">Enabled</span>
+                                {% else %}
+                                <span class="badge bg-warning">Disabled</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

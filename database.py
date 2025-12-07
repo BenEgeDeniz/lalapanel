@@ -91,6 +91,26 @@ class Database:
                     attempted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             ''')
+            
+            # Panel settings table
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS panel_settings (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    setting_key TEXT UNIQUE NOT NULL,
+                    setting_value TEXT,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            
+            # Initialize default settings if not exists
+            cursor.execute('SELECT COUNT(*) FROM panel_settings WHERE setting_key = ?', ('panel_domain',))
+            if cursor.fetchone()[0] == 0:
+                cursor.execute('INSERT INTO panel_settings (setting_key, setting_value) VALUES (?, ?)', 
+                              ('panel_domain', ''))
+                cursor.execute('INSERT INTO panel_settings (setting_key, setting_value) VALUES (?, ?)', 
+                              ('panel_port', '8080'))
+                cursor.execute('INSERT INTO panel_settings (setting_key, setting_value) VALUES (?, ?)', 
+                              ('panel_ssl_enabled', '0'))
     
     def create_user(self, username, password_hash):
         """Create a new user"""
@@ -262,3 +282,31 @@ class Database:
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute('DELETE FROM ftp_users WHERE id = ?', (user_id,))
+    
+    def get_panel_setting(self, key):
+        """Get a panel setting value"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT setting_value FROM panel_settings WHERE setting_key = ?', (key,))
+            result = cursor.fetchone()
+            return result['setting_value'] if result else None
+    
+    def set_panel_setting(self, key, value):
+        """Set a panel setting value"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO panel_settings (setting_key, setting_value, updated_at) 
+                VALUES (?, ?, CURRENT_TIMESTAMP)
+                ON CONFLICT(setting_key) 
+                DO UPDATE SET setting_value = ?, updated_at = CURRENT_TIMESTAMP
+            ''', (key, value, value))
+    
+    def get_all_panel_settings(self):
+        """Get all panel settings"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT setting_key, setting_value FROM panel_settings')
+            rows = cursor.fetchall()
+            return {row['setting_key']: row['setting_value'] for row in rows}
+
