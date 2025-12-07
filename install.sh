@@ -214,6 +214,53 @@ EOF
     print_info "Nginx configured"
 }
 
+setup_panel_nginx() {
+    print_info "Configuring Nginx reverse proxy for Lala Panel..."
+    
+    # Create panel nginx configuration
+    cat > /etc/nginx/sites-available/lalapanel << 'EOF'
+# Nginx configuration for Lala Panel
+# Generated during installation
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name _;
+    
+    # Let's Encrypt ACME challenge (for future SSL setup)
+    location /.well-known/acme-challenge/ {
+        root /var/www/_panel;
+        try_files $uri =404;
+    }
+    
+    client_max_body_size 100M;
+    
+    location / {
+        proxy_pass http://127.0.0.1:8080;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+EOF
+    
+    # Create webroot directory for ACME challenges
+    mkdir -p /var/www/_panel/.well-known/acme-challenge
+    chmod -R 755 /var/www/_panel
+    
+    # Enable the panel nginx configuration
+    ln -sf /etc/nginx/sites-available/lalapanel /etc/nginx/sites-enabled/lalapanel
+    
+    # Test nginx configuration
+    nginx -t
+    
+    # Reload nginx to apply changes
+    systemctl reload nginx
+    
+    print_info "Panel Nginx configuration created"
+}
+
 install_lalapanel() {
     print_info "Installing Lala Panel..."
     
@@ -378,13 +425,14 @@ show_completion_message() {
     echo "  sudo systemctl status lalapanel"
     echo
     echo "Access the panel at:"
-    echo "  http://YOUR_SERVER_IP:8080"
+    echo "  http://YOUR_SERVER_IP"
     echo
     echo "Admin credentials:"
     echo "  Username: $ADMIN_USER"
     echo
     echo "Important notes:"
-    echo "  - Configure firewall to allow port 8080"
+    echo "  - Configure firewall to allow ports 80 and 443"
+    echo "  - Panel runs on localhost:8080 and is proxied through Nginx"
     echo "  - PHP-FPM is installed and running for PHP 8.1, 8.2, and 8.3"
     echo "  - All credentials (MariaDB root password, Let's Encrypt email)"
     echo "    are securely stored in /etc/lalapanel/lalapanel.env"
@@ -409,6 +457,7 @@ main() {
     setup_mariadb
     install_php_fpm
     setup_nginx
+    setup_panel_nginx
     install_lalapanel
     create_admin_user
     create_env_file
