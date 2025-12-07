@@ -400,3 +400,67 @@ code {
         grid-template-columns: 1fr;
     }
 }
+
+/* Additional UI Enhancements */
+.btn-outline-info {
+    color: var(--accent-color);
+    border-color: var(--accent-color);
+}
+
+.btn-outline-info:hover {
+    background-color: var(--accent-color);
+    border-color: var(--accent-color);
+    color: white;
+}
+
+.list-group-item {
+    background-color: transparent;
+    color: var(--text-primary);
+}
+
+.list-group-item:hover {
+    background-color: var(--bg-tertiary);
+}
+
+/* Code color variations */
+code.text-info {
+    color: #5bc0de !important;
+}
+
+code.text-warning {
+    color: #f0ad4e !important;
+}
+
+code.text-success {
+    color: #5cb85c !important;
+}
+
+/* Improved modal styling */
+.modal-body code {
+    font-size: 0.9rem;
+    padding: 0.25rem 0.5rem;
+}
+
+.btn-link {
+    color: var(--accent-color);
+    text-decoration: none;
+}
+
+.btn-link:hover {
+    color: var(--accent-hover);
+}
+
+/* Table alignment */
+.align-middle {
+    vertical-align: middle;
+}
+
+/* Alert transitions */
+.alert {
+    transition: opacity 0.3s ease;
+}
+
+/* Badge count styling */
+.card-header .badge {
+    font-size: 0.75rem;
+}

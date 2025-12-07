@@ -139,49 +139,54 @@
     <!-- Databases -->
     <div class="col-lg-6">
         <div class="card">
-            <div class="card-header bg-light">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
                 <h5 class="mb-0"><i class="bi bi-database"></i> Databases</h5>
+                {% if databases %}
+                <span class="badge bg-secondary">{{ databases|length }}</span>
+                {% endif %}
             </div>
             <div class="card-body">
                 {% if databases %}
-                <div class="table-responsive">
-                    <table class="table table-sm">
-                        <thead>
-                            <tr>
-                                <th>Database</th>
-                                <th>User</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for db in databases %}
-                            <tr>
-                                <td><code class="small">{{ db['db_name'] }}</code></td>
-                                <td><code class="small">{{ db['db_user'] }}</code></td>
-                                <td>
-                                    <form method="POST" action="{{ url_for('delete_database', db_id=db['id']) }}" 
-                                          style="display: inline;" 
-                                          onsubmit="return confirm('Delete database {{ db['db_name'] }}?');">
-                                        <button type="submit" class="btn btn-sm btn-outline-danger">
-                                            <i class="bi bi-trash"></i>
-                                        </button>
-                                    </form>
-                                </td>
-                            </tr>
-                            <tr>
-                                <td colspan="3" class="small text-muted">
-                                    Password: <code>{{ db['db_password'] }}</code>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                <div class="list-group list-group-flush">
+                    {% for db in databases %}
+                    <div class="list-group-item bg-transparent border-secondary px-0">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">
+                                    <i class="bi bi-database text-info"></i>
+                                    <code class="text-info">{{ db['db_name'] }}</code>
+                                </h6>
+                                <p class="mb-0 small text-muted">
+                                    <i class="bi bi-person"></i> User: <code class="text-warning">{{ db['db_user'] }}</code>
+                                </p>
+                            </div>
+                            <div class="btn-group btn-group-sm">
+                                <button type="button" class="btn btn-outline-info" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#siteDbModal{{ db['id'] }}"
+                                        title="View credentials">
+                                    <i class="bi bi-key"></i>
+                                </button>
+                                <form method="POST" action="{{ url_for('delete_database', db_id=db['id']) }}" 
+                                      style="display: inline;" 
+                                      onsubmit="return confirm('⚠️ Delete database {{ db['db_name'] }}?\n\nThis action cannot be undone!');">
+                                    <button type="submit" class="btn btn-outline-danger" title="Delete database">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
                 </div>
                 {% else %}
-                <p class="text-muted">No databases configured for this site.</p>
-                <a href="{{ url_for('databases') }}" class="btn btn-sm btn-outline-primary">
-                    <i class="bi bi-plus-circle"></i> Create Database
-                </a>
+                <div class="text-center py-4">
+                    <i class="bi bi-database display-4 text-muted d-block mb-2"></i>
+                    <p class="text-muted mb-3">No databases configured for this site.</p>
+                    <a href="{{ url_for('databases') }}" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-plus-circle"></i> Create Database
+                    </a>
+                </div>
                 {% endif %}
             </div>
         </div>
@@ -234,4 +239,79 @@
         </div>
     </div>
 </div>
+
+<!-- Database Credential Modals -->
+{% for db in databases %}
+<div class="modal fade" id="siteDbModal{{ db['id'] }}" tabindex="-1" aria-labelledby="siteDbModalLabel{{ db['id'] }}" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="siteDbModalLabel{{ db['id'] }}">
+                    <i class="bi bi-key"></i> Database Credentials
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info mb-3">
+                    <i class="bi bi-info-circle"></i> 
+                    <small>Use these credentials to connect to your database from your application.</small>
+                </div>
+                <table class="table table-sm mb-0">
+                    <tbody>
+                        <tr>
+                            <th width="35%" class="text-muted">Database Name:</th>
+                            <td>
+                                <code class="text-info">{{ db['db_name'] }}</code>
+                                <button class="btn btn-sm btn-link p-0 ms-2" onclick="copyToClipboard('{{ db['db_name'] }}')" title="Copy to clipboard">
+                                    <i class="bi bi-clipboard"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted">Username:</th>
+                            <td>
+                                <code class="text-warning">{{ db['db_user'] }}</code>
+                                <button class="btn btn-sm btn-link p-0 ms-2" onclick="copyToClipboard('{{ db['db_user'] }}')" title="Copy to clipboard">
+                                    <i class="bi bi-clipboard"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted">Password:</th>
+                            <td>
+                                <code class="text-success">{{ db['db_password'] }}</code>
+                                <button class="btn btn-sm btn-link p-0 ms-2" onclick="copyToClipboard('{{ db['db_password'] }}')" title="Copy to clipboard">
+                                    <i class="bi bi-clipboard"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted">Host:</th>
+                            <td>
+                                <code>localhost</code>
+                                <button class="btn btn-sm btn-link p-0 ms-2" onclick="copyToClipboard('localhost')" title="Copy to clipboard">
+                                    <i class="bi bi-clipboard"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted">Port:</th>
+                            <td><code>3306</code></td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted">Created:</th>
+                            <td><small>{{ db['created_at'] }}</small></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle"></i> Close
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
 {% endblock %}
