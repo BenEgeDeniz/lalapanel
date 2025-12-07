@@ -221,6 +221,30 @@ def create_site():
                 except Exception as e:
                     flash(f'Warning: Database creation failed: {str(e)}', 'warning')
             
+            # Create SSH/FTP user if requested
+            create_ftp = request.form.get('create_ftp_user') == 'on'
+            if create_ftp:
+                ftp_username = request.form.get('ftp_username', '')
+                ftp_password = request.form.get('ftp_password', '')
+                access_type = request.form.get('access_type', 'ftp')
+                
+                # Auto-generate username if not provided
+                if not ftp_username:
+                    domain_base = domain.replace('.', '').replace('-', '')[:10]
+                    hash_suffix = hashlib.md5(f"{domain}{time.time()}".encode()).hexdigest()[:4]
+                    ftp_username = f"ftp_{domain_base}_{hash_suffix}"[:32]
+                
+                # Auto-generate password if not provided
+                if not ftp_password:
+                    ftp_password = user_manager.generate_password()
+                
+                try:
+                    user_manager.create_ftp_user(ftp_username, ftp_password, domain, access_type)
+                    db.create_ftp_user(site_id, ftp_username, access_type)
+                    flash(f'SSH/FTP User created: {ftp_username} (Password: {ftp_password})', 'success')
+                except Exception as e:
+                    flash(f'Warning: SSH/FTP user creation failed: {str(e)}', 'warning')
+            
             flash(f'Site {domain} created successfully!', 'success')
             return redirect(url_for('dashboard'))
             

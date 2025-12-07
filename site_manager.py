@@ -496,6 +496,11 @@ class UserManager:
             raise ValueError("Username too long (max 32 characters)")
         return username
     
+    def generate_password(self, length=16):
+        """Generate a random password"""
+        alphabet = string.ascii_letters + string.digits
+        return ''.join(secrets.choice(alphabet) for _ in range(length))
+    
     def create_ftp_user(self, username, password, site_domain, access_type='ftp'):
         """Create a system user for FTP/SSH access"""
         # Validate username
