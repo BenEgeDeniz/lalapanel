@@ -209,7 +209,9 @@ EOF
 setup_panel_nginx() {
     print_info "Configuring Nginx reverse proxy for Lala Panel..."
     
-    # Create panel nginx configuration as default server on port 80
+    # Create initial panel nginx configuration with default port
+    # Note: This is created during installation before the database exists.
+    # The app.py startup will ensure this config stays up to date with database settings.
     cat > /etc/nginx/sites-available/lalapanel << 'EOF'
 # Nginx configuration for Lala Panel
 # Generated during installation
