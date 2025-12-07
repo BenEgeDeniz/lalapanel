@@ -57,7 +57,7 @@ def init_components():
     global db, site_manager, db_manager, user_manager
     if db is None:
         db = Database(app.config['DATABASE_PATH'])
-        site_manager = SiteManager(app.config)
+        site_manager = SiteManager(app.config, db)
         db_manager = DatabaseManager(app.config)
         user_manager = UserManager(app.config)
     return db, site_manager, db_manager, user_manager

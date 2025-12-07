@@ -13,8 +13,9 @@ from pathlib import Path
 class SiteManager:
     """Manages site creation, deletion, and configuration"""
     
-    def __init__(self, config):
+    def __init__(self, config, db=None):
         self.config = config
+        self.db = db
         self._init_config_values()
     
     def _get_config_value(self, key):
@@ -442,7 +443,17 @@ server {{
             Exception: If nginx configuration cannot be created or reloaded
         """
         config_path = os.path.join(self.nginx_available, 'lalapanel')
+        
+        # Get panel port from database settings if available, otherwise use config default
         panel_port = self._get_config_value('PANEL_PORT')
+        if self.db:
+            db_port = self.db.get_panel_setting('panel_port')
+            if db_port:
+                try:
+                    panel_port = int(db_port)
+                except (ValueError, TypeError):
+                    # If conversion fails, use the config default
+                    pass
         
         # Create webroot directory for ACME challenges with proper permissions
         panel_webroot = os.path.join(self.sites_dir, '_panel')
