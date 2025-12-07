@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+
+{% block title %}Edit PHP Settings - {{ site['domain'] }} - Lala Panel{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h2">
+        <i class="bi bi-file-earmark-code"></i> Edit PHP Settings
+    </h1>
+    <a href="{{ url_for('site_detail', site_id=site['id']) }}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Site
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i>
+            These PHP settings are specific to this site and override the global PHP configuration.
+            Changes will take effect immediately after saving.
+        </div>
+        
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">
+                    <i class="bi bi-code-slash"></i> {{ site['domain'] }} - PHP {{ site['php_version'] }}
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('save_php_ini', site_id=site['id']) }}">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="upload_max_filesize" class="form-label">
+                                <i class="bi bi-upload"></i> Maximum Upload File Size
+                            </label>
+                            <select id="upload_max_filesize" name="upload_max_filesize" class="form-select">
+                                <option value="10M" {% if php_settings.upload_max_filesize == '10M' %}selected{% endif %}>10 MB</option>
+                                <option value="50M" {% if php_settings.upload_max_filesize == '50M' %}selected{% endif %}>50 MB</option>
+                                <option value="100M" {% if php_settings.upload_max_filesize == '100M' %}selected{% endif %}>100 MB</option>
+                                <option value="256M" {% if php_settings.upload_max_filesize == '256M' %}selected{% endif %}>256 MB</option>
+                                <option value="512M" {% if php_settings.upload_max_filesize == '512M' %}selected{% endif %}>512 MB</option>
+                                <option value="1G" {% if php_settings.upload_max_filesize == '1G' %}selected{% endif %}>1 GB</option>
+                                <option value="2G" {% if php_settings.upload_max_filesize == '2G' %}selected{% endif %}>2 GB</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="post_max_size" class="form-label">
+                                <i class="bi bi-file-post"></i> Maximum POST Data Size
+                            </label>
+                            <select id="post_max_size" name="post_max_size" class="form-select">
+                                <option value="10M" {% if php_settings.post_max_size == '10M' %}selected{% endif %}>10 MB</option>
+                                <option value="50M" {% if php_settings.post_max_size == '50M' %}selected{% endif %}>50 MB</option>
+                                <option value="100M" {% if php_settings.post_max_size == '100M' %}selected{% endif %}>100 MB</option>
+                                <option value="256M" {% if php_settings.post_max_size == '256M' %}selected{% endif %}>256 MB</option>
+                                <option value="512M" {% if php_settings.post_max_size == '512M' %}selected{% endif %}>512 MB</option>
+                                <option value="1G" {% if php_settings.post_max_size == '1G' %}selected{% endif %}>1 GB</option>
+                                <option value="2G" {% if php_settings.post_max_size == '2G' %}selected{% endif %}>2 GB</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="memory_limit" class="form-label">
+                                <i class="bi bi-memory"></i> Memory Limit
+                            </label>
+                            <select id="memory_limit" name="memory_limit" class="form-select">
+                                <option value="128M" {% if php_settings.memory_limit == '128M' %}selected{% endif %}>128 MB</option>
+                                <option value="256M" {% if php_settings.memory_limit == '256M' %}selected{% endif %}>256 MB</option>
+                                <option value="512M" {% if php_settings.memory_limit == '512M' %}selected{% endif %}>512 MB</option>
+                                <option value="1G" {% if php_settings.memory_limit == '1G' %}selected{% endif %}>1 GB</option>
+                                <option value="2G" {% if php_settings.memory_limit == '2G' %}selected{% endif %}>2 GB</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="max_execution_time" class="form-label">
+                                <i class="bi bi-clock"></i> Maximum Execution Time
+                            </label>
+                            <select id="max_execution_time" name="max_execution_time" class="form-select">
+                                <option value="30" {% if php_settings.max_execution_time == '30' %}selected{% endif %}>30 seconds</option>
+                                <option value="60" {% if php_settings.max_execution_time == '60' %}selected{% endif %}>60 seconds</option>
+                                <option value="120" {% if php_settings.max_execution_time == '120' %}selected{% endif %}>120 seconds</option>
+                                <option value="300" {% if php_settings.max_execution_time == '300' %}selected{% endif %}>300 seconds</option>
+                                <option value="600" {% if php_settings.max_execution_time == '600' %}selected{% endif %}>600 seconds</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="max_input_time" class="form-label">
+                                <i class="bi bi-hourglass"></i> Maximum Input Time
+                            </label>
+                            <select id="max_input_time" name="max_input_time" class="form-select">
+                                <option value="60" {% if php_settings.max_input_time == '60' %}selected{% endif %}>60 seconds</option>
+                                <option value="120" {% if php_settings.max_input_time == '120' %}selected{% endif %}>120 seconds</option>
+                                <option value="300" {% if php_settings.max_input_time == '300' %}selected{% endif %}>300 seconds</option>
+                                <option value="600" {% if php_settings.max_input_time == '600' %}selected{% endif %}>600 seconds</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="max_input_vars" class="form-label">
+                                <i class="bi bi-list"></i> Maximum Input Variables
+                            </label>
+                            <select id="max_input_vars" name="max_input_vars" class="form-select">
+                                <option value="1000" {% if php_settings.max_input_vars == '1000' %}selected{% endif %}>1000</option>
+                                <option value="3000" {% if php_settings.max_input_vars == '3000' %}selected{% endif %}>3000</option>
+                                <option value="5000" {% if php_settings.max_input_vars == '5000' %}selected{% endif %}>5000</option>
+                                <option value="10000" {% if php_settings.max_input_vars == '10000' %}selected{% endif %}>10000</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <hr class="my-4">
+                    
+                    <div class="d-flex justify-content-end gap-2">
+                        <a href="{{ url_for('site_detail', site_id=site['id']) }}" class="btn btn-secondary">
+                            Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-save"></i> Save Settings
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header bg-light">
+                <h6 class="mb-0"><i class="bi bi-info-circle"></i> Common PHP Settings Explained</h6>
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-4">upload_max_filesize</dt>
+                    <dd class="col-sm-8">Maximum size of an uploaded file. Must be smaller than post_max_size.</dd>
+                    
+                    <dt class="col-sm-4">post_max_size</dt>
+                    <dd class="col-sm-8">Maximum size of POST data. Should be larger than upload_max_filesize.</dd>
+                    
+                    <dt class="col-sm-4">memory_limit</dt>
+                    <dd class="col-sm-8">Maximum amount of memory a script may consume.</dd>
+                    
+                    <dt class="col-sm-4">max_execution_time</dt>
+                    <dd class="col-sm-8">Maximum time in seconds a script is allowed to run.</dd>
+                    
+                    <dt class="col-sm-4">max_input_time</dt>
+                    <dd class="col-sm-8">Maximum time in seconds a script may parse input data.</dd>
+                    
+                    <dt class="col-sm-4 mb-0">max_input_vars</dt>
+                    <dd class="col-sm-8 mb-0">Maximum number of input variables accepted.</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

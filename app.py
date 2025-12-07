@@ -406,6 +406,198 @@ def delete_site(site_id):
     
     return redirect(url_for('dashboard'))
 
+@app.route('/sites/<int:site_id>/vhost')
+@login_required
+def edit_vhost(site_id):
+    """Edit nginx vhost configuration"""
+    init_components()
+    site = db.get_site(site_id)
+    if not site:
+        flash('Site not found', 'error')
+        return redirect(url_for('dashboard'))
+    
+    # Read current nginx config
+    config_path = os.path.join(app.config['NGINX_SITES_AVAILABLE'], site['domain'])
+    try:
+        with open(config_path, 'r') as f:
+            config_content = f.read()
+    except FileNotFoundError:
+        flash('Nginx configuration file not found', 'error')
+        return redirect(url_for('site_detail', site_id=site_id))
+    except Exception as e:
+        flash(f'Error reading configuration: {str(e)}', 'error')
+        return redirect(url_for('site_detail', site_id=site_id))
+    
+    return render_template('edit_vhost.html', site=site, config_content=config_content)
+
+@app.route('/sites/<int:site_id>/vhost/save', methods=['POST'])
+@login_required
+def save_vhost(site_id):
+    """Save nginx vhost configuration"""
+    init_components()
+    site = db.get_site(site_id)
+    if not site:
+        flash('Site not found', 'error')
+        return redirect(url_for('dashboard'))
+    
+    config_content = request.form.get('config_content', '')
+    config_path = os.path.join(app.config['NGINX_SITES_AVAILABLE'], site['domain'])
+    
+    try:
+        # Write configuration to file
+        with open(config_path, 'w') as f:
+            f.write(config_content)
+        
+        # Test nginx configuration
+        result = subprocess.run(
+            ['/usr/sbin/nginx', '-t'],
+            capture_output=True,
+            text=True
+        )
+        
+        if result.returncode != 0:
+            flash(f'Configuration saved but nginx test failed: {result.stderr}', 'warning')
+        else:
+            # Reload nginx
+            subprocess.run(['/usr/bin/systemctl', 'reload', 'nginx'], check=False)
+            flash('Nginx configuration updated successfully', 'success')
+        
+    except Exception as e:
+        flash(f'Error saving configuration: {str(e)}', 'error')
+    
+    return redirect(url_for('edit_vhost', site_id=site_id))
+
+@app.route('/sites/<int:site_id>/vhost/test', methods=['POST'])
+@login_required
+def test_nginx_config(site_id):
+    """Test nginx configuration"""
+    init_components()
+    site = db.get_site(site_id)
+    if not site:
+        return jsonify({'error': 'Site not found'}), 404
+    
+    config_content = request.form.get('config_content', '')
+    config_path = os.path.join(app.config['NGINX_SITES_AVAILABLE'], site['domain'])
+    
+    # Save to temporary file
+    temp_path = config_path + '.tmp'
+    try:
+        with open(temp_path, 'w') as f:
+            f.write(config_content)
+        
+        # Backup original
+        backup_path = config_path + '.backup'
+        shutil.copy2(config_path, backup_path)
+        
+        # Replace with new config
+        shutil.move(temp_path, config_path)
+        
+        # Test
+        result = subprocess.run(
+            ['/usr/sbin/nginx', '-t'],
+            capture_output=True,
+            text=True
+        )
+        
+        # Restore original
+        shutil.move(backup_path, config_path)
+        
+        if result.returncode == 0:
+            return jsonify({'success': True, 'output': result.stderr})
+        else:
+            return jsonify({'success': False, 'error': result.stderr})
+    
+    except Exception as e:
+        # Clean up
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+        if os.path.exists(backup_path):
+            shutil.move(backup_path, config_path)
+        
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/sites/<int:site_id>/php-ini')
+@login_required
+def edit_php_ini(site_id):
+    """Edit PHP settings for a site"""
+    init_components()
+    site = db.get_site(site_id)
+    if not site:
+        flash('Site not found', 'error')
+        return redirect(url_for('dashboard'))
+    
+    # Parse current PHP settings from nginx config
+    config_path = os.path.join(app.config['NGINX_SITES_AVAILABLE'], site['domain'])
+    php_settings = {
+        'upload_max_filesize': '100M',
+        'post_max_size': '100M',
+        'memory_limit': '256M',
+        'max_execution_time': '60',
+        'max_input_time': '60',
+        'max_input_vars': '1000'
+    }
+    
+    try:
+        with open(config_path, 'r') as f:
+            config_content = f.read()
+            
+        # Extract PHP_VALUE settings
+        import re
+        php_value_match = re.search(r'fastcgi_param PHP_VALUE "([^"]+)"', config_content)
+        if php_value_match:
+            php_value_str = php_value_match.group(1)
+            for setting in php_value_str.split('\\n'):
+                setting = setting.strip()
+                if '=' in setting:
+                    key, value = setting.split('=', 1)
+                    key = key.strip()
+                    value = value.strip()
+                    if key in php_settings:
+                        php_settings[key] = value
+    
+    except Exception as e:
+        flash(f'Warning: Could not read current PHP settings: {str(e)}', 'warning')
+    
+    return render_template('edit_php_ini.html', site=site, php_settings=php_settings)
+
+@app.route('/sites/<int:site_id>/php-ini/save', methods=['POST'])
+@login_required
+def save_php_ini(site_id):
+    """Save PHP settings for a site"""
+    init_components()
+    site = db.get_site(site_id)
+    if not site:
+        flash('Site not found', 'error')
+        return redirect(url_for('dashboard'))
+    
+    # Get PHP settings from form
+    php_settings = {
+        'upload_max_filesize': request.form.get('upload_max_filesize', '100M'),
+        'post_max_size': request.form.get('post_max_size', '100M'),
+        'memory_limit': request.form.get('memory_limit', '256M'),
+        'max_execution_time': request.form.get('max_execution_time', '60'),
+        'max_input_time': request.form.get('max_input_time', '60'),
+        'max_input_vars': request.form.get('max_input_vars', '1000')
+    }
+    
+    try:
+        # Recreate nginx config with new PHP settings
+        site_manager.create_nginx_config(
+            site['domain'], 
+            site['php_version'], 
+            ssl_enabled=site['ssl_enabled'],
+            php_settings=php_settings
+        )
+        
+        # Enable site
+        site_manager.enable_site(site['domain'])
+        
+        flash('PHP settings updated successfully', 'success')
+    except Exception as e:
+        flash(f'Error updating PHP settings: {str(e)}', 'error')
+    
+    return redirect(url_for('edit_php_ini', site_id=site_id))
+
 @app.route('/databases')
 @login_required
 def databases():

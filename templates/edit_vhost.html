@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Nginx Config - {{ site['domain'] }} - Lala Panel{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h2">
+        <i class="bi bi-file-earmark-code"></i> Edit Nginx Configuration
+    </h1>
+    <a href="{{ url_for('site_detail', site_id=site['id']) }}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Site
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle"></i>
+            <strong>Warning:</strong> Editing the Nginx configuration directly can break your site. 
+            Make sure you know what you're doing. Always test configuration before saving.
+        </div>
+        
+        <div class="card">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">
+                    <i class="bi bi-globe"></i> {{ site['domain'] }}
+                    <small class="text-muted ms-2">/etc/nginx/sites-available/{{ site['domain'] }}</small>
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('save_vhost', site_id=site['id']) }}">
+                    <div class="mb-3">
+                        <textarea name="config_content" id="config-editor" class="form-control" 
+                                  rows="30" style="font-family: 'Courier New', monospace; font-size: 14px;">{{ config_content }}</textarea>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <button type="button" class="btn btn-outline-secondary" id="test-config">
+                                <i class="bi bi-check-circle"></i> Test Configuration
+                            </button>
+                        </div>
+                        <div>
+                            <a href="{{ url_for('site_detail', site_id=site['id']) }}" class="btn btn-secondary">
+                                Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-save"></i> Save Configuration
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div id="test-result" class="mt-3" style="display: none;">
+            <div class="card">
+                <div class="card-header" id="test-result-header">
+                    <h6 class="mb-0">Configuration Test Result</h6>
+                </div>
+                <div class="card-body">
+                    <pre id="test-result-content" style="margin: 0;"></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('test-config').addEventListener('click', function() {
+    const content = document.getElementById('config-editor').value;
+    const testResult = document.getElementById('test-result');
+    const testResultHeader = document.getElementById('test-result-header');
+    const testResultContent = document.getElementById('test-result-content');
+    
+    // Show loading state
+    testResult.style.display = 'block';
+    testResultHeader.className = 'card-header bg-info text-white';
+    testResultContent.textContent = 'Testing configuration...';
+    
+    fetch('{{ url_for("test_nginx_config", site_id=site["id"]) }}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'config_content=' + encodeURIComponent(content)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            testResultHeader.className = 'card-header bg-success text-white';
+            testResultContent.textContent = 'Configuration test successful!\n\n' + data.output;
+        } else {
+            testResultHeader.className = 'card-header bg-danger text-white';
+            testResultContent.textContent = 'Configuration test failed!\n\n' + data.error;
+        }
+    })
+    .catch(error => {
+        testResultHeader.className = 'card-header bg-danger text-white';
+        testResultContent.textContent = 'Error testing configuration: ' + error;
+    });
+});
+</script>
+{% endblock %}
