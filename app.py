@@ -1420,7 +1420,13 @@ def save_panel_settings():
         db.set_panel_setting('panel_domain', panel_domain)
         db.set_panel_setting('panel_port', str(port))
         
-        flash('Panel settings saved. Restart the panel service to apply changes.', 'success')
+        # If a domain is set, create/update the nginx config for it
+        if panel_domain:
+            ssl_enabled = db.get_panel_setting('panel_ssl_enabled') == '1'
+            site_manager.create_panel_nginx_config(panel_domain, ssl_enabled=ssl_enabled)
+            flash('Panel settings saved and nginx configuration updated.', 'success')
+        else:
+            flash('Panel settings saved. Restart the panel service to apply changes.', 'success')
     except ValueError:
         flash('Invalid port number', 'error')
     except Exception as e:
@@ -1440,8 +1446,14 @@ def request_panel_ssl():
         return redirect(url_for('panel_settings'))
     
     try:
-        # Request SSL certificate (domain only, no www)
-        site_manager.request_ssl_certificate(panel_domain, include_www=False)
+        # First, update panel nginx config to serve ACME challenges
+        panel_webroot = site_manager.create_panel_nginx_config(panel_domain, ssl_enabled=False)
+        
+        # Request SSL certificate using the panel webroot
+        site_manager.request_ssl_certificate(panel_domain, include_www=False, webroot=panel_webroot)
+        
+        # Now update nginx config with SSL enabled
+        site_manager.create_panel_nginx_config(panel_domain, ssl_enabled=True)
         
         # Mark SSL as enabled
         db.set_panel_setting('panel_ssl_enabled', '1')
@@ -1459,8 +1471,15 @@ def disable_panel_ssl():
     init_components()
     
     try:
+        panel_domain = db.get_panel_setting('panel_domain')
+        
+        # Update nginx config to remove SSL
+        site_manager.create_panel_nginx_config(panel_domain, ssl_enabled=False)
+        
+        # Mark SSL as disabled
         db.set_panel_setting('panel_ssl_enabled', '0')
-        flash('SSL disabled for panel. Restart panel service to apply changes.', 'success')
+        
+        flash('SSL disabled for panel.', 'success')
     except Exception as e:
         flash(f'Error disabling SSL: {str(e)}', 'error')
     
