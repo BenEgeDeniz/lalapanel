@@ -204,24 +204,6 @@ EOF
     # Enable the default catch-all server
     ln -sf /etc/nginx/sites-available/000-default /etc/nginx/sites-enabled/000-default
     
-    # Create Nginx configuration for the panel
-    cat > /etc/nginx/sites-available/lalapanel << 'EOF'
-server {
-    listen 8080;
-    server_name _;
-    
-    client_max_body_size 100M;
-    
-    location / {
-        proxy_pass http://127.0.0.1:8080;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-}
-EOF
-    
     # Test nginx configuration
     nginx -t
     
