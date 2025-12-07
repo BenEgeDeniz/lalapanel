@@ -3,8 +3,11 @@ Database models for Lala Panel
 """
 import sqlite3
 import os
+import logging
 from datetime import datetime
 from contextlib import contextmanager
+
+logger = logging.getLogger(__name__)
 
 class Database:
     """Database handler for Lala Panel"""
@@ -324,7 +327,7 @@ class Database:
             try:
                 return int(db_port)
             except (ValueError, TypeError):
-                # If conversion fails, use the default
-                pass
+                # If conversion fails, log a warning and use the default
+                logger.warning(f"Invalid panel port value in database: '{db_port}'. Using default port {default_port}")
         return default_port
 
