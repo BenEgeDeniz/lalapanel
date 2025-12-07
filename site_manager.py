@@ -434,13 +434,24 @@ server {{
         Args:
             panel_domain (str, optional): The domain name for the panel. If None, uses '_' (catch-all).
             ssl_enabled (bool): Whether to enable SSL configuration
+            
+        Returns:
+            str: Path to the panel webroot directory where ACME challenges are served from
+            
+        Raises:
+            Exception: If nginx configuration cannot be created or reloaded
         """
         config_path = os.path.join(self.nginx_available, 'lalapanel')
         panel_port = self._get_config_value('PANEL_PORT')
         
         # Create webroot directory for ACME challenges with proper permissions
         panel_webroot = os.path.join(self.sites_dir, '_panel')
-        os.makedirs(os.path.join(panel_webroot, '.well-known', 'acme-challenge'), mode=0o755, exist_ok=True)
+        acme_path = os.path.join(panel_webroot, '.well-known', 'acme-challenge')
+        
+        # Create directory structure with restrictive permissions first
+        os.makedirs(acme_path, mode=0o755, exist_ok=True)
+        # Ensure proper ownership (current user/group should be appropriate)
+        # In production, this should be owned by the web server user
         
         server_name = panel_domain if panel_domain else '_'
         
@@ -536,7 +547,10 @@ server {{
             os.symlink(config_path, enabled_path)
         
         # Reload nginx to apply changes
-        subprocess.run(['/usr/bin/systemctl', 'reload', 'nginx'], check=True)
+        try:
+            subprocess.run(['/usr/bin/systemctl', 'reload', 'nginx'], check=True)
+        except subprocess.CalledProcessError as e:
+            raise Exception(f"Failed to reload nginx after updating panel configuration: {e}")
         
         return panel_webroot
     
