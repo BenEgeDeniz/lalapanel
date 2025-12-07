@@ -107,6 +107,16 @@ class SiteManager:
         """Ensure PHP-FPM service is running for the specified version"""
         service_name = f'php{php_version}-fpm'
         
+        # Check if service exists (is installed)
+        check_exists = subprocess.run(
+            ['/usr/bin/systemctl', 'list-unit-files', service_name],
+            capture_output=True,
+            text=True
+        )
+        
+        if service_name not in check_exists.stdout:
+            raise Exception(f"PHP {php_version} is not installed on this system. Available versions: {', '.join(self._get_config_value('AVAILABLE_PHP_VERSIONS'))}")
+        
         # Check if service is active
         result = subprocess.run(
             ['/usr/bin/systemctl', 'is-active', service_name],
@@ -122,7 +132,7 @@ class SiteManager:
                 import time
                 time.sleep(1)
             except subprocess.CalledProcessError:
-                raise Exception(f"PHP {php_version} FPM service is not running and could not be started")
+                raise Exception(f"PHP {php_version} FPM service is not running and could not be started. Please check the service status with: systemctl status {service_name}")
     
     def create_nginx_config(self, domain, php_version, ssl_enabled=False, php_settings=None):
         """Create Nginx configuration for a site"""
