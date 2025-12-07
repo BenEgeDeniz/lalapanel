@@ -220,6 +220,11 @@ body {
     color: var(--text-primary);
 }
 
+.form-control::placeholder {
+    color: var(--text-secondary);
+    opacity: 0.8;
+}
+
 .form-control:focus,
 .form-select:focus {
     background-color: var(--bg-tertiary);
@@ -331,7 +336,16 @@ body {
 
 .table-hover tbody tr:hover {
     background-color: var(--bg-tertiary);
-    color: var(--text-primary);
+    color: var(--text-primary) !important;
+}
+
+.table-hover tbody tr:hover td,
+.table-hover tbody tr:hover th {
+    color: var(--text-primary) !important;
+}
+
+.table-hover tbody tr:hover code {
+    color: var(--accent-color) !important;
 }
 
 .table-dark {
@@ -463,4 +477,21 @@ code.text-success {
 /* Badge count styling */
 .card-header .badge {
     font-size: 0.75rem;
+}
+
+/* Footer */
+.footer {
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    background-color: var(--bg-secondary) !important;
+    z-index: 1000;
+}
+
+body {
+    padding-bottom: 60px;
+}
+
+.footer a:hover {
+    color: var(--accent-color) !important;
 }

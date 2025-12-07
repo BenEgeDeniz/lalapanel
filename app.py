@@ -19,6 +19,30 @@ from site_manager import SiteManager, DatabaseManager, UserManager
 app = Flask(__name__)
 app.config.from_object(Config)
 
+# Template filters
+@app.template_filter('os_info')
+def os_info_filter():
+    import platform
+    return f"{platform.system()} {platform.release()}"
+
+@app.template_filter('python_version')
+def python_version_filter():
+    import sys
+    return f"{sys.version.split()[0]}"
+
+@app.template_filter('uptime')
+def uptime_filter():
+    try:
+        import psutil
+        boot_time = psutil.boot_time()
+        uptime_seconds = time.time() - boot_time
+        days = int(uptime_seconds // 86400)
+        hours = int((uptime_seconds % 86400) // 3600)
+        minutes = int((uptime_seconds % 3600) // 60)
+        return f"{days}d {hours}h {minutes}m"
+    except:
+        return "Unknown"
+
 # Initialize components lazily to allow testing
 db = None
 site_manager = None
@@ -731,6 +755,114 @@ def create_folder(site_id):
         return jsonify({'success': True, 'folder_name': folder_name})
     except Exception as e:
         return jsonify({'error': f'Failed to create folder: {str(e)}'}), 500
+
+@app.route('/system/info')
+@login_required
+def system_info():
+    """System information and statistics"""
+    init_components()
+    
+    # Get system stats
+    import psutil
+    
+    # CPU usage
+    cpu_percent = psutil.cpu_percent(interval=1)
+    cpu_count = psutil.cpu_count()
+    
+    # Memory usage
+    memory = psutil.virtual_memory()
+    
+    # Disk usage
+    disk = psutil.disk_usage('/')
+    
+    # Load average
+    load_avg = os.getloadavg() if hasattr(os, 'getloadavg') else (0, 0, 0)
+    
+    # Service status
+    services = {
+        'nginx': get_service_status('nginx'),
+        'mariadb': get_service_status('mariadb'),
+    }
+    
+    # Check PHP-FPM services
+    php_services = {}
+    for version in app.config['AVAILABLE_PHP_VERSIONS']:
+        service_name = f'php{version}-fpm'
+        php_services[version] = get_service_status(service_name)
+    
+    stats = {
+        'cpu': {
+            'percent': cpu_percent,
+            'count': cpu_count,
+            'load_avg': load_avg
+        },
+        'memory': {
+            'total': memory.total,
+            'used': memory.used,
+            'percent': memory.percent,
+            'available': memory.available
+        },
+        'disk': {
+            'total': disk.total,
+            'used': disk.used,
+            'percent': disk.percent,
+            'free': disk.free
+        },
+        'services': services,
+        'php_services': php_services
+    }
+    
+    return render_template('system_info.html', stats=stats)
+
+@app.route('/system/services')
+@login_required
+def service_manager():
+    """Service management page"""
+    init_components()
+    return render_template('service_manager.html', 
+                         php_versions=app.config['AVAILABLE_PHP_VERSIONS'])
+
+@app.route('/system/services/restart', methods=['POST'])
+@login_required
+def restart_service():
+    """Restart a service"""
+    init_components()
+    service_name = request.form.get('service')
+    
+    allowed_services = ['nginx', 'mariadb']
+    for version in app.config['AVAILABLE_PHP_VERSIONS']:
+        allowed_services.append(f'php{version}-fpm')
+    
+    if service_name not in allowed_services:
+        flash('Invalid service name', 'error')
+        return redirect(url_for('service_manager'))
+    
+    try:
+        result = subprocess.run(
+            ['/usr/bin/systemctl', 'restart', service_name],
+            check=True,
+            capture_output=True,
+            text=True
+        )
+        flash(f'Service {service_name} restarted successfully', 'success')
+    except subprocess.CalledProcessError as e:
+        flash(f'Failed to restart {service_name}: {e.stderr}', 'error')
+    except Exception as e:
+        flash(f'Error restarting service: {str(e)}', 'error')
+    
+    return redirect(url_for('service_manager'))
+
+def get_service_status(service_name):
+    """Get the status of a systemd service"""
+    try:
+        result = subprocess.run(
+            ['/usr/bin/systemctl', 'is-active', service_name],
+            capture_output=True,
+            text=True
+        )
+        return result.stdout.strip() == 'active'
+    except:
+        return False
 
 if __name__ == '__main__':
     # Ensure directories exist

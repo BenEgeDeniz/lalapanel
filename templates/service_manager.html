@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block title %}Service Manager - Lala Panel{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h2">
+        <i class="bi bi-gear"></i> Service Manager
+    </h1>
+    <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Dashboard
+    </a>
+</div>
+
+<div class="alert alert-info">
+    <i class="bi bi-info-circle"></i> Restart services when you make configuration changes or if a service is not responding properly.
+</div>
+
+<div class="row g-3">
+    <!-- Nginx Service -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-globe"></i> Nginx Web Server</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-3">
+                    Nginx serves your websites and handles HTTP/HTTPS requests. Restart after making changes to site configurations.
+                </p>
+                <form method="POST" action="{{ url_for('restart_service') }}" 
+                      data-confirm="Are you sure you want to restart Nginx? This will briefly interrupt web services.">
+                    <input type="hidden" name="service" value="nginx">
+                    <button type="submit" class="btn btn-warning">
+                        <i class="bi bi-arrow-repeat"></i> Restart Nginx
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- MariaDB Service -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-database"></i> MariaDB Database</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-3">
+                    MariaDB manages all databases for your websites. Restart only if experiencing database issues.
+                </p>
+                <form method="POST" action="{{ url_for('restart_service') }}" 
+                      data-confirm="⚠️ Warning: Restarting MariaDB will disconnect all database connections!&#10;&#10;Are you sure?">
+                    <input type="hidden" name="service" value="mariadb">
+                    <button type="submit" class="btn btn-warning">
+                        <i class="bi bi-arrow-repeat"></i> Restart MariaDB
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mt-3">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-code-slash"></i> PHP-FPM Services</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted mb-3">
+                    PHP-FPM processes handle PHP execution for your websites. Each PHP version runs as a separate service.
+                </p>
+                <div class="row g-3">
+                    {% for version in php_versions %}
+                    <div class="col-md-4">
+                        <div class="card border-secondary">
+                            <div class="card-body">
+                                <h6 class="card-title">
+                                    <i class="bi bi-code-square"></i> PHP {{ version }}
+                                </h6>
+                                <p class="card-text small text-muted">
+                                    php{{ version }}-fpm service
+                                </p>
+                                <form method="POST" action="{{ url_for('restart_service') }}" 
+                                      data-confirm="Restart PHP {{ version }} FPM service?">
+                                    <input type="hidden" name="service" value="php{{ version }}-fpm">
+                                    <button type="submit" class="btn btn-sm btn-warning">
+                                        <i class="bi bi-arrow-repeat"></i> Restart
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="alert alert-warning mt-4">
+    <i class="bi bi-exclamation-triangle"></i> 
+    <strong>Important:</strong> Restarting services will cause a brief interruption. 
+    Make sure no critical operations are running before restarting.
+</div>
+{% endblock %}

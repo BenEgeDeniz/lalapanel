@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+
+{% block title %}System Information - Lala Panel{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h2">
+        <i class="bi bi-info-circle"></i> System Information
+    </h1>
+    <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Back to Dashboard
+    </a>
+</div>
+
+<div class="row g-3">
+    <!-- CPU Usage -->
+    <div class="col-md-6 col-lg-3">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="card-subtitle mb-2 text-muted">
+                    <i class="bi bi-cpu"></i> CPU Usage
+                </h6>
+                <h2 class="card-title mb-0">{{ "%.1f"|format(stats.cpu.percent) }}%</h2>
+                <div class="progress mt-2" style="height: 8px;">
+                    <div class="progress-bar {% if stats.cpu.percent > 80 %}bg-danger{% elif stats.cpu.percent > 60 %}bg-warning{% else %}bg-success{% endif %}" 
+                         role="progressbar" 
+                         style="width: {{ stats.cpu.percent }}%"></div>
+                </div>
+                <small class="text-muted">{{ stats.cpu.count }} cores</small>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Memory Usage -->
+    <div class="col-md-6 col-lg-3">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="card-subtitle mb-2 text-muted">
+                    <i class="bi bi-memory"></i> Memory Usage
+                </h6>
+                <h2 class="card-title mb-0">{{ "%.1f"|format(stats.memory.percent) }}%</h2>
+                <div class="progress mt-2" style="height: 8px;">
+                    <div class="progress-bar {% if stats.memory.percent > 80 %}bg-danger{% elif stats.memory.percent > 60 %}bg-warning{% else %}bg-success{% endif %}" 
+                         role="progressbar" 
+                         style="width: {{ stats.memory.percent }}%"></div>
+                </div>
+                <small class="text-muted">{{ "%.1f"|format(stats.memory.used / 1024**3) }} / {{ "%.1f"|format(stats.memory.total / 1024**3) }} GB</small>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Disk Usage -->
+    <div class="col-md-6 col-lg-3">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="card-subtitle mb-2 text-muted">
+                    <i class="bi bi-hdd"></i> Disk Usage
+                </h6>
+                <h2 class="card-title mb-0">{{ "%.1f"|format(stats.disk.percent) }}%</h2>
+                <div class="progress mt-2" style="height: 8px;">
+                    <div class="progress-bar {% if stats.disk.percent > 80 %}bg-danger{% elif stats.disk.percent > 60 %}bg-warning{% else %}bg-success{% endif %}" 
+                         role="progressbar" 
+                         style="width: {{ stats.disk.percent }}%"></div>
+                </div>
+                <small class="text-muted">{{ "%.1f"|format(stats.disk.used / 1024**3) }} / {{ "%.1f"|format(stats.disk.total / 1024**3) }} GB</small>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Load Average -->
+    <div class="col-md-6 col-lg-3">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="card-subtitle mb-2 text-muted">
+                    <i class="bi bi-graph-up"></i> Load Average
+                </h6>
+                <h2 class="card-title mb-0">{{ "%.2f"|format(stats.cpu.load_avg[0]) }}</h2>
+                <small class="text-muted">
+                    1m: {{ "%.2f"|format(stats.cpu.load_avg[0]) }} | 
+                    5m: {{ "%.2f"|format(stats.cpu.load_avg[1]) }} | 
+                    15m: {{ "%.2f"|format(stats.cpu.load_avg[2]) }}
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mt-3">
+    <!-- Services Status -->
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-gear"></i> Core Services</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm mb-0">
+                    <thead>
+                        <tr>
+                            <th>Service</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><i class="bi bi-globe"></i> Nginx</td>
+                            <td>
+                                {% if stats.services.nginx %}
+                                <span class="badge bg-success"><i class="bi bi-check-circle"></i> Running</span>
+                                {% else %}
+                                <span class="badge bg-danger"><i class="bi bi-x-circle"></i> Stopped</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{{ url_for('service_manager') }}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-gear"></i> Manage
+                                </a>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><i class="bi bi-database"></i> MariaDB</td>
+                            <td>
+                                {% if stats.services.mariadb %}
+                                <span class="badge bg-success"><i class="bi bi-check-circle"></i> Running</span>
+                                {% else %}
+                                <span class="badge bg-danger"><i class="bi bi-x-circle"></i> Stopped</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{{ url_for('service_manager') }}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-gear"></i> Manage
+                                </a>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- PHP Services -->
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-code-slash"></i> PHP-FPM Services</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm mb-0">
+                    <thead>
+                        <tr>
+                            <th>Version</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for version, is_active in stats.php_services.items() %}
+                        <tr>
+                            <td>PHP {{ version }}</td>
+                            <td>
+                                {% if is_active %}
+                                <span class="badge bg-success"><i class="bi bi-check-circle"></i> Running</span>
+                                {% else %}
+                                <span class="badge bg-danger"><i class="bi bi-x-circle"></i> Stopped</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{{ url_for('service_manager') }}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-gear"></i> Manage
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mt-3">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-info-circle"></i> System Information</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <tbody>
+                        <tr>
+                            <th width="30%">Operating System:</th>
+                            <td>
+                                <code>{{ ''|os_info }}</code>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Python Version:</th>
+                            <td><code>{{ ''|python_version }}</code></td>
+                        </tr>
+                        <tr>
+                            <th>Uptime:</th>
+                            <td><code>{{ ''|uptime }}</code></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Auto-refresh every 5 seconds
+setTimeout(function() {
+    location.reload();
+}, 5000);
+</script>
+{% endblock %}
