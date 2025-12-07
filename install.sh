@@ -173,19 +173,11 @@ setup_nginx() {
     # Remove default site
     rm -f /etc/nginx/sites-enabled/default
     
-    # Create default catch-all server to reject unknown domains
+    # Create default catch-all server for HTTPS to reject unknown domains
+    # Port 80 will be handled by the panel configuration
     cat > /etc/nginx/sites-available/000-default << 'EOF'
 # Default server configuration for Lala Panel
-# This catches all requests to unknown domains and rejects them
-
-server {
-    listen 80 default_server;
-    listen [::]:80 default_server;
-    server_name _;
-    
-    # Return 444 (connection closed without response) for unknown domains
-    return 444;
-}
+# This catches all HTTPS requests to unknown domains and rejects them
 
 server {
     listen 443 ssl default_server;
@@ -217,14 +209,14 @@ EOF
 setup_panel_nginx() {
     print_info "Configuring Nginx reverse proxy for Lala Panel..."
     
-    # Create panel nginx configuration
+    # Create panel nginx configuration as default server on port 80
     cat > /etc/nginx/sites-available/lalapanel << 'EOF'
 # Nginx configuration for Lala Panel
 # Generated during installation
 
 server {
-    listen 80;
-    listen [::]:80;
+    listen 80 default_server;
+    listen [::]:80 default_server;
     server_name _;
     
     # Let's Encrypt ACME challenge (for future SSL setup)
