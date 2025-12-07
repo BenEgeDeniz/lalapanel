@@ -7,6 +7,7 @@ import subprocess
 import secrets
 import string
 import re
+import time
 from pathlib import Path
 
 class SiteManager:
@@ -104,7 +105,14 @@ class SiteManager:
         return site_path
     
     def _ensure_php_fpm_running(self, php_version):
-        """Ensure PHP-FPM service is running for the specified version"""
+        """Ensure PHP-FPM service is running for the specified version
+        
+        Args:
+            php_version (str): The PHP version (e.g., '8.3')
+            
+        Raises:
+            Exception: If PHP version is not installed or service cannot be started
+        """
         service_name = f'php{php_version}-fpm'
         
         # Check if service exists (is installed)
@@ -129,7 +137,6 @@ class SiteManager:
             try:
                 subprocess.run(['/usr/bin/systemctl', 'start', service_name], check=True)
                 # Wait a moment for the service to start
-                import time
                 time.sleep(1)
             except subprocess.CalledProcessError:
                 raise Exception(f"PHP {php_version} FPM service is not running and could not be started. Please check the service status with: systemctl status {service_name}")

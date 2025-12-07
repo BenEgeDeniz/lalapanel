@@ -1003,7 +1003,7 @@ def create_file(site_id):
         base_path = os.path.realpath(base_path)
         if not new_file.startswith(base_path):
             return jsonify({'error': 'Access denied'}), 403
-    except:
+    except (OSError, ValueError) as e:
         return jsonify({'error': 'Invalid path'}), 400
     
     if os.path.exists(new_file):
