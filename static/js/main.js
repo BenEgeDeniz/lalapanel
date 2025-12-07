@@ -2,20 +2,15 @@
  * Lala Panel - Main JavaScript
  */
 
-// Auto-dismiss alerts after 5 seconds
+// Initialize app when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
-    const alerts = document.querySelectorAll('.alert');
-    alerts.forEach(alert => {
-        setTimeout(() => {
-            alert.style.opacity = '0';
-            setTimeout(() => alert.remove(), 300);
-        }, 5000);
-    });
+    // Alerts are now persistent - removed auto-dismiss
     
     // Event delegation for copy-to-clipboard buttons
     document.addEventListener('click', function(e) {
         const copyBtn = e.target.closest('[data-copy]');
         if (copyBtn) {
+            e.preventDefault();
             const textToCopy = copyBtn.getAttribute('data-copy');
             if (textToCopy) {
                 copyToClipboard(textToCopy);

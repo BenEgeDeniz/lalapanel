@@ -119,7 +119,8 @@ class SiteManager:
                 'post_max_size': '100M',
                 'memory_limit': '256M',
                 'max_execution_time': '60',
-                'max_input_time': '60'
+                'max_input_time': '60',
+                'max_input_vars': '1000'
             }
         
         # Build PHP value string
@@ -127,7 +128,8 @@ class SiteManager:
         php_value += f"post_max_size={php_settings.get('post_max_size', php_settings.get('upload_max_filesize', '100M'))} \\n "
         php_value += f"memory_limit={php_settings.get('memory_limit', '256M')} \\n "
         php_value += f"max_execution_time={php_settings.get('max_execution_time', '60')} \\n "
-        php_value += f"max_input_time={php_settings.get('max_input_time', '60')}"
+        php_value += f"max_input_time={php_settings.get('max_input_time', '60')} \\n "
+        php_value += f"max_input_vars={php_settings.get('max_input_vars', '1000')}"
         
         # Build config
         config = f"""# Nginx configuration for {domain}
@@ -495,6 +497,11 @@ class UserManager:
         if len(username) > 32:
             raise ValueError("Username too long (max 32 characters)")
         return username
+    
+    def generate_password(self, length=16):
+        """Generate a random password"""
+        alphabet = string.ascii_letters + string.digits
+        return ''.join(secrets.choice(alphabet) for _ in range(length))
     
     def create_ftp_user(self, username, password, site_domain, access_type='ftp'):
         """Create a system user for FTP/SSH access"""
