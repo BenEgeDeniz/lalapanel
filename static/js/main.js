@@ -34,6 +34,7 @@ function copyToClipboard(text) {
 }
 
 // Fallback copy method for older browsers
+// Note: document.execCommand('copy') is deprecated but kept for legacy browser support
 function fallbackCopyToClipboard(text) {
     const textArea = document.createElement('textarea');
     textArea.value = text;

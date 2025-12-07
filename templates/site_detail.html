@@ -262,7 +262,7 @@
                             <th width="35%" class="text-muted">Database Name:</th>
                             <td>
                                 <code class="text-info">{{ db['db_name'] }}</code>
-                                <button class="btn btn-sm btn-link p-0 ms-2" onclick="copyToClipboard('{{ db['db_name'] }}')" title="Copy to clipboard">
+                                <button class="btn btn-sm btn-link p-0 ms-2" data-copy="{{ db['db_name']|e }}" onclick="copyToClipboard(this.getAttribute('data-copy'))" title="Copy to clipboard">
                                     <i class="bi bi-clipboard"></i>
                                 </button>
                             </td>
@@ -271,7 +271,7 @@
                             <th class="text-muted">Username:</th>
                             <td>
                                 <code class="text-warning">{{ db['db_user'] }}</code>
-                                <button class="btn btn-sm btn-link p-0 ms-2" onclick="copyToClipboard('{{ db['db_user'] }}')" title="Copy to clipboard">
+                                <button class="btn btn-sm btn-link p-0 ms-2" data-copy="{{ db['db_user']|e }}" onclick="copyToClipboard(this.getAttribute('data-copy'))" title="Copy to clipboard">
                                     <i class="bi bi-clipboard"></i>
                                 </button>
                             </td>
@@ -280,7 +280,7 @@
                             <th class="text-muted">Password:</th>
                             <td>
                                 <code class="text-success">{{ db['db_password'] }}</code>
-                                <button class="btn btn-sm btn-link p-0 ms-2" onclick="copyToClipboard('{{ db['db_password'] }}')" title="Copy to clipboard">
+                                <button class="btn btn-sm btn-link p-0 ms-2" data-copy="{{ db['db_password']|e }}" onclick="copyToClipboard(this.getAttribute('data-copy'))" title="Copy to clipboard">
                                     <i class="bi bi-clipboard"></i>
                                 </button>
                             </td>
@@ -289,7 +289,7 @@
                             <th class="text-muted">Host:</th>
                             <td>
                                 <code>localhost</code>
-                                <button class="btn btn-sm btn-link p-0 ms-2" onclick="copyToClipboard('localhost')" title="Copy to clipboard">
+                                <button class="btn btn-sm btn-link p-0 ms-2" data-copy="localhost" onclick="copyToClipboard(this.getAttribute('data-copy'))" title="Copy to clipboard">
                                     <i class="bi bi-clipboard"></i>
                                 </button>
                             </td>
