@@ -49,7 +49,7 @@
                     MariaDB manages all databases for your websites. Restart only if experiencing database issues.
                 </p>
                 <form method="POST" action="{{ url_for('restart_service') }}" 
-                      data-confirm="⚠️ Warning: Restarting MariaDB will disconnect all database connections!&#10;&#10;Are you sure?">
+                      data-confirm="⚠️ Warning: Restarting MariaDB will disconnect all database connections!\n\nAre you sure?">
                     <input type="hidden" name="service" value="mariadb">
                     <button type="submit" class="btn btn-warning">
                         <i class="bi bi-arrow-repeat"></i> Restart MariaDB

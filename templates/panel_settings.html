@@ -112,7 +112,7 @@
                     Wait about 10 seconds then access the panel via the new domain/port.
                 </div>
                 <form method="POST" action="{{ url_for('restart_panel_service') }}" 
-                      data-confirm="⚠️ This will restart the panel and disconnect you!&#10;&#10;Make sure you know the new access URL before proceeding.">
+                      data-confirm="⚠️ This will restart the panel and disconnect you!\n\nMake sure you know the new access URL before proceeding.">
                     <button type="submit" class="btn btn-warning">
                         <i class="bi bi-arrow-repeat"></i> Restart Panel Service
                     </button>

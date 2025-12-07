@@ -209,9 +209,32 @@
 </div>
 
 <script>
-// Auto-refresh every 5 seconds
-setTimeout(function() {
-    location.reload();
-}, 5000);
+// Auto-refresh stats every 5 seconds using AJAX
+function refreshStats() {
+    fetch('{{ url_for("system_info") }}')
+        .then(response => response.text())
+        .then(html => {
+            // Parse the HTML and extract stats
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            
+            // Update the page content (excluding scripts)
+            const newContent = doc.querySelector('.container');
+            if (newContent) {
+                document.querySelector('.container').innerHTML = newContent.innerHTML;
+            }
+            
+            // Schedule next refresh
+            setTimeout(refreshStats, 5000);
+        })
+        .catch(error => {
+            console.error('Failed to refresh stats:', error);
+            // Try again in 10 seconds if failed
+            setTimeout(refreshStats, 10000);
+        });
+}
+
+// Start auto-refresh after initial load
+setTimeout(refreshStats, 5000);
 </script>
 {% endblock %}
