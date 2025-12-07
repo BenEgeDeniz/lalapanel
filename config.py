@@ -25,7 +25,7 @@ class Config:
     
     # PHP-FPM
     PHP_FPM_SOCKET_DIR = '/run/php'
-    AVAILABLE_PHP_VERSIONS = ['8.5', '8.4', '8.3', '8.2', '8.1']
+    AVAILABLE_PHP_VERSIONS = ['8.3', '8.2', '8.1']
     
     # Database
     DATABASE_PATH = os.path.join(CONFIG_DIR, 'lalapanel.db')

@@ -7,6 +7,7 @@ import subprocess
 import secrets
 import string
 import re
+import time
 from pathlib import Path
 
 class SiteManager:
@@ -103,8 +104,48 @@ class SiteManager:
         
         return site_path
     
+    def _ensure_php_fpm_running(self, php_version):
+        """Ensure PHP-FPM service is running for the specified version
+        
+        Args:
+            php_version (str): The PHP version (e.g., '8.3')
+            
+        Raises:
+            Exception: If PHP version is not installed or service cannot be started
+        """
+        service_name = f'php{php_version}-fpm'
+        
+        # Check if service exists (is installed)
+        check_exists = subprocess.run(
+            ['/usr/bin/systemctl', 'list-unit-files', service_name],
+            capture_output=True,
+            text=True
+        )
+        
+        if service_name not in check_exists.stdout:
+            raise Exception(f"PHP {php_version} is not installed on this system. Available versions: {', '.join(self._get_config_value('AVAILABLE_PHP_VERSIONS'))}")
+        
+        # Check if service is active
+        result = subprocess.run(
+            ['/usr/bin/systemctl', 'is-active', service_name],
+            capture_output=True,
+            text=True
+        )
+        
+        # If not active, try to start it
+        if result.returncode != 0:
+            try:
+                subprocess.run(['/usr/bin/systemctl', 'start', service_name], check=True)
+                # Wait a moment for the service to start
+                time.sleep(1)
+            except subprocess.CalledProcessError:
+                raise Exception(f"PHP {php_version} FPM service is not running and could not be started. Please check the service status with: systemctl status {service_name}")
+    
     def create_nginx_config(self, domain, php_version, ssl_enabled=False, php_settings=None):
         """Create Nginx configuration for a site"""
+        # Ensure PHP-FPM is running
+        self._ensure_php_fpm_running(php_version)
+        
         site_path = os.path.join(self.sites_dir, domain)
         log_path = os.path.join(self.log_dir, domain)
         config_path = os.path.join(self.nginx_available, domain)
@@ -305,9 +346,16 @@ server {{
         if os.path.exists(config_path):
             os.remove(config_path)
     
-    def request_ssl_certificate(self, domain, include_www=True):
+    def request_ssl_certificate(self, domain, include_www=True, webroot=None):
         """Request SSL certificate from Let's Encrypt"""
         letsencrypt_email = self._get_config_value('LETSENCRYPT_EMAIL')
+        
+        # Determine webroot path
+        if webroot is None:
+            webroot = os.path.join(self.sites_dir, domain, 'htdocs')
+        
+        # Ensure webroot directory exists
+        os.makedirs(webroot, exist_ok=True)
         
         # Build certbot command
         cmd = [
@@ -316,7 +364,7 @@ server {{
             '--agree-tos',
             '--email', letsencrypt_email,
             '--webroot',
-            '-w', os.path.join(self.sites_dir, domain, 'htdocs'),
+            '-w', webroot,
             '-d', domain
         ]
         

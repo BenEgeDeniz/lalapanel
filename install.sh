@@ -133,6 +133,7 @@ install_php_fpm() {
     apt-get update -qq
     
     # Install PHP-FPM for different PHP versions
+    # NOTE: These versions must match AVAILABLE_PHP_VERSIONS in config.py
     for version in 8.3 8.2 8.1; do
         print_info "Installing PHP $version and PHP-FPM..."
         

@@ -972,6 +972,53 @@ def create_folder(site_id):
     except Exception as e:
         return jsonify({'error': f'Failed to create folder: {str(e)}'}), 500
 
+@app.route('/files/create-file/<int:site_id>', methods=['POST'])
+@login_required
+def create_file(site_id):
+    """Create a new file in a site"""
+    init_components()
+    site = db.get_site(site_id)
+    if not site:
+        return jsonify({'error': 'Site not found'}), 404
+    
+    # Get path and file name from form
+    rel_path = request.form.get('path', '')
+    file_name = request.form.get('file_name', '')
+    
+    # Security check
+    if '..' in rel_path or rel_path.startswith('/'):
+        return jsonify({'error': 'Invalid path'}), 400
+    
+    if not file_name or '..' in file_name or '/' in file_name:
+        return jsonify({'error': 'Invalid file name'}), 400
+    
+    # Build full path
+    base_path = os.path.join(app.config['SITES_DIR'], site['domain'], 'htdocs')
+    parent_dir = os.path.join(base_path, rel_path) if rel_path else base_path
+    new_file = os.path.join(parent_dir, file_name)
+    
+    # Ensure we're still within the site directory
+    try:
+        new_file = os.path.realpath(new_file)
+        base_path = os.path.realpath(base_path)
+        if not new_file.startswith(base_path):
+            return jsonify({'error': 'Access denied'}), 403
+    except (OSError, ValueError) as e:
+        return jsonify({'error': 'Invalid path'}), 400
+    
+    if os.path.exists(new_file):
+        return jsonify({'error': 'File already exists'}), 400
+    
+    # Create file
+    try:
+        with open(new_file, 'w', encoding='utf-8') as f:
+            f.write('')  # Create empty file
+        os.chmod(new_file, 0o644)
+        return jsonify({'success': True, 'file_name': file_name})
+    except Exception as e:
+        return jsonify({'error': f'Failed to create file: {str(e)}'}), 500
+
+
 @app.route('/files/rename/<int:site_id>', methods=['POST'])
 @login_required
 def rename_file(site_id):
@@ -1233,57 +1280,64 @@ def system_info():
     """System information and statistics"""
     init_components()
     
-    # Get system stats
-    import psutil
-    
-    # CPU usage
-    cpu_percent = psutil.cpu_percent(interval=1)
-    cpu_count = psutil.cpu_count()
-    
-    # Memory usage
-    memory = psutil.virtual_memory()
-    
-    # Disk usage
-    disk = psutil.disk_usage('/')
-    
-    # Load average
-    load_avg = os.getloadavg() if hasattr(os, 'getloadavg') else (0, 0, 0)
-    
-    # Service status
-    services = {
-        'nginx': get_service_status('nginx'),
-        'mariadb': get_service_status('mariadb'),
-    }
-    
-    # Check PHP-FPM services
-    php_services = {}
-    for version in app.config['AVAILABLE_PHP_VERSIONS']:
-        service_name = f'php{version}-fpm'
-        php_services[version] = get_service_status(service_name)
-    
-    stats = {
-        'cpu': {
-            'percent': cpu_percent,
-            'count': cpu_count,
-            'load_avg': load_avg
-        },
-        'memory': {
-            'total': memory.total,
-            'used': memory.used,
-            'percent': memory.percent,
-            'available': memory.available
-        },
-        'disk': {
-            'total': disk.total,
-            'used': disk.used,
-            'percent': disk.percent,
-            'free': disk.free
-        },
-        'services': services,
-        'php_services': php_services
-    }
-    
-    return render_template('system_info.html', stats=stats)
+    try:
+        # Get system stats
+        import psutil
+        
+        # CPU usage
+        cpu_percent = psutil.cpu_percent(interval=1)
+        cpu_count = psutil.cpu_count()
+        
+        # Memory usage
+        memory = psutil.virtual_memory()
+        
+        # Disk usage
+        disk = psutil.disk_usage('/')
+        
+        # Load average
+        load_avg = os.getloadavg() if hasattr(os, 'getloadavg') else (0, 0, 0)
+        
+        # Service status
+        services = {
+            'nginx': get_service_status('nginx'),
+            'mariadb': get_service_status('mariadb'),
+        }
+        
+        # Check PHP-FPM services
+        php_services = {}
+        for version in app.config['AVAILABLE_PHP_VERSIONS']:
+            service_name = f'php{version}-fpm'
+            php_services[version] = get_service_status(service_name)
+        
+        stats = {
+            'cpu': {
+                'percent': cpu_percent,
+                'count': cpu_count,
+                'load_avg': load_avg
+            },
+            'memory': {
+                'total': memory.total,
+                'used': memory.used,
+                'percent': memory.percent,
+                'available': memory.available
+            },
+            'disk': {
+                'total': disk.total,
+                'used': disk.used,
+                'percent': disk.percent,
+                'free': disk.free
+            },
+            'services': services,
+            'php_services': php_services
+        }
+        
+        return render_template('system_info.html', stats=stats)
+    except ImportError as e:
+        flash('System monitoring module (psutil) is not installed. Please install it with: pip install psutil', 'error')
+        return redirect(url_for('dashboard'))
+    except Exception as e:
+        flash(f'Error loading system information: {str(e)}', 'error')
+        return redirect(url_for('dashboard'))
 
 @app.route('/system/services')
 @login_required
