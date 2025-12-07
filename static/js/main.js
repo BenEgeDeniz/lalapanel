@@ -22,9 +22,21 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     });
+    
+    // Event delegation for delete confirmations
+    document.addEventListener('submit', function(e) {
+        const form = e.target;
+        const confirmMsg = form.getAttribute('data-confirm');
+        if (confirmMsg) {
+            if (!confirm(confirmMsg)) {
+                e.preventDefault();
+                return false;
+            }
+        }
+    });
 });
 
-// Confirm before deleting
+// Confirm before deleting (kept for backward compatibility)
 function confirmDelete(message) {
     return confirm(message || 'Are you sure you want to delete this?');
 }

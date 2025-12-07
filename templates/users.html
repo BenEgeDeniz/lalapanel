@@ -114,7 +114,7 @@
                                     </button>
                                     <form method="POST" action="{{ url_for('delete_ftp_user', user_id=user['id']) }}" 
                                           style="display: inline;" 
-                                          onsubmit="return confirm('⚠️ Are you sure you want to delete user {{ user['username'] }}?\n\nThis action cannot be undone!');">
+                                          data-confirm="⚠️ Are you sure you want to delete user {{ user['username']|e }}?&#10;&#10;This action cannot be undone!">
                                         <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete user">
                                             <i class="bi bi-trash"></i>
                                         </button>

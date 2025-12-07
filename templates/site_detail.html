@@ -169,7 +169,7 @@
                                 </button>
                                 <form method="POST" action="{{ url_for('delete_database', db_id=db['id']) }}" 
                                       style="display: inline;" 
-                                      onsubmit="return confirm('⚠️ Delete database {{ db['db_name'] }}?\n\nThis action cannot be undone!');">
+                                      data-confirm="⚠️ Delete database {{ db['db_name']|e }}?&#10;&#10;This action cannot be undone!">
                                     <button type="submit" class="btn btn-outline-danger" title="Delete database">
                                         <i class="bi bi-trash"></i>
                                     </button>
@@ -230,7 +230,7 @@
             <div class="card-body">
                 <p class="text-muted">Once you delete a site, there is no going back. Please be certain.</p>
                 <form method="POST" action="{{ url_for('delete_site', site_id=site['id']) }}" 
-                      onsubmit="return confirm('Are you absolutely sure you want to delete {{ site['domain'] }}? This action cannot be undone!');">
+                      data-confirm="Are you absolutely sure you want to delete {{ site['domain']|e }}? This action cannot be undone!">
                     <button type="submit" class="btn btn-danger">
                         <i class="bi bi-trash"></i> Delete Site Permanently
                     </button>

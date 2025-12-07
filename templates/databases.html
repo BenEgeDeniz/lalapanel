@@ -79,7 +79,7 @@
                                     </button>
                                     <form method="POST" action="{{ url_for('delete_database', db_id=db['id']) }}" 
                                           style="display: inline;" 
-                                          onsubmit="return confirm('⚠️ Are you sure you want to delete database {{ db['db_name'] }}?\n\nThis action cannot be undone!');">
+                                          data-confirm="⚠️ Are you sure you want to delete database {{ db['db_name']|e }}?&#10;&#10;This action cannot be undone!">
                                         <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete database">
                                             <i class="bi bi-trash"></i>
                                         </button>
