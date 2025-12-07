@@ -445,15 +445,8 @@ server {{
         config_path = os.path.join(self.nginx_available, 'lalapanel')
         
         # Get panel port from database settings if available, otherwise use config default
-        panel_port = self._get_config_value('PANEL_PORT')
-        if self.db:
-            db_port = self.db.get_panel_setting('panel_port')
-            if db_port:
-                try:
-                    panel_port = int(db_port)
-                except (ValueError, TypeError):
-                    # If conversion fails, use the config default
-                    pass
+        default_port = self._get_config_value('PANEL_PORT')
+        panel_port = self.db.get_panel_port(default_port) if self.db else default_port
         
         # Create webroot directory for ACME challenges with proper permissions
         panel_webroot = os.path.join(self.sites_dir, '_panel')

@@ -1541,14 +1541,7 @@ if __name__ == '__main__':
     db.clear_old_login_attempts()
     
     # Get panel port from database settings if available, otherwise use config default
-    panel_port = app.config['PANEL_PORT']
-    db_port = db.get_panel_setting('panel_port')
-    if db_port:
-        try:
-            panel_port = int(db_port)
-        except (ValueError, TypeError):
-            # If conversion fails, use the config default
-            pass
+    panel_port = db.get_panel_port(app.config['PANEL_PORT'])
     
     print(f"Starting Lala Panel on {app.config['PANEL_HOST']}:{panel_port}")
     app.run(host=app.config['PANEL_HOST'], 
