@@ -11,6 +11,17 @@ document.addEventListener('DOMContentLoaded', function() {
             setTimeout(() => alert.remove(), 300);
         }, 5000);
     });
+    
+    // Event delegation for copy-to-clipboard buttons
+    document.addEventListener('click', function(e) {
+        const copyBtn = e.target.closest('[data-copy]');
+        if (copyBtn) {
+            const textToCopy = copyBtn.getAttribute('data-copy');
+            if (textToCopy) {
+                copyToClipboard(textToCopy);
+            }
+        }
+    });
 });
 
 // Confirm before deleting
@@ -35,6 +46,7 @@ function copyToClipboard(text) {
 
 // Fallback copy method for older browsers
 // Note: document.execCommand('copy') is deprecated but kept for legacy browser support
+// TODO: Remove this fallback after determining minimum browser support requirements
 function fallbackCopyToClipboard(text) {
     const textArea = document.createElement('textarea');
     textArea.value = text;

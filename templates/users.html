@@ -162,7 +162,7 @@
                             <th width="35%" class="text-muted">Username:</th>
                             <td>
                                 <code class="text-info">{{ user['username'] }}</code>
-                                <button class="btn btn-sm btn-link p-0 ms-2" data-copy="{{ user['username']|e }}" onclick="copyToClipboard(this.getAttribute('data-copy'))" title="Copy to clipboard">
+                                <button class="btn btn-sm btn-link p-0 ms-2" data-copy="{{ user['username']|e }}" title="Copy to clipboard">
                                     <i class="bi bi-clipboard"></i>
                                 </button>
                             </td>
@@ -171,7 +171,7 @@
                             <th class="text-muted">Site Directory:</th>
                             <td>
                                 <code>/var/www/{{ user['domain'] }}</code>
-                                <button class="btn btn-sm btn-link p-0 ms-2" data-copy="/var/www/{{ user['domain']|e }}" onclick="copyToClipboard(this.getAttribute('data-copy'))" title="Copy to clipboard">
+                                <button class="btn btn-sm btn-link p-0 ms-2" data-copy="/var/www/{{ user['domain']|e }}" title="Copy to clipboard">
                                     <i class="bi bi-clipboard"></i>
                                 </button>
                             </td>
@@ -201,14 +201,14 @@
                 <div class="bg-dark p-3 rounded">
                     <p class="mb-2 small text-muted"><strong>SFTP Connection:</strong></p>
                     <code class="text-success">sftp {{ user['username'] }}@{{ request.host.split(':')[0] }}</code>
-                    <button class="btn btn-sm btn-link p-0 ms-2" data-copy="sftp {{ user['username']|e }}@{{ request.host.split(':')[0]|e }}" onclick="copyToClipboard(this.getAttribute('data-copy'))" title="Copy to clipboard">
+                    <button class="btn btn-sm btn-link p-0 ms-2" data-copy="sftp {{ user['username']|e }}@{{ request.host.split(':')[0]|e }}" title="Copy to clipboard">
                         <i class="bi bi-clipboard"></i>
                     </button>
                     
                     {% if user['access_type'] == 'ssh' %}
                     <p class="mb-2 mt-3 small text-muted"><strong>SSH Connection:</strong></p>
                     <code class="text-success">ssh {{ user['username'] }}@{{ request.host.split(':')[0] }}</code>
-                    <button class="btn btn-sm btn-link p-0 ms-2" data-copy="ssh {{ user['username']|e }}@{{ request.host.split(':')[0]|e }}" onclick="copyToClipboard(this.getAttribute('data-copy'))" title="Copy to clipboard">
+                    <button class="btn btn-sm btn-link p-0 ms-2" data-copy="ssh {{ user['username']|e }}@{{ request.host.split(':')[0]|e }}" title="Copy to clipboard">
                         <i class="bi bi-clipboard"></i>
                     </button>
                     {% endif %}
