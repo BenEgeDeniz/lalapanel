@@ -115,15 +115,27 @@ class SiteManager:
         """
         service_name = f'php{php_version}-fpm'
         
-        # Check if service exists (is installed)
+        # Check if service exists (is installed) by checking if systemctl can load it
         check_exists = subprocess.run(
-            ['/usr/bin/systemctl', 'list-unit-files', service_name],
+            ['/usr/bin/systemctl', 'cat', service_name],
             capture_output=True,
             text=True
         )
         
-        if service_name not in check_exists.stdout:
-            raise Exception(f"PHP {php_version} is not installed on this system. Available versions: {', '.join(self._get_config_value('AVAILABLE_PHP_VERSIONS'))}")
+        if check_exists.returncode != 0:
+            # Get list of actually installed PHP versions
+            installed_versions = []
+            for version in self._get_config_value('AVAILABLE_PHP_VERSIONS'):
+                check_version = subprocess.run(
+                    ['/usr/bin/systemctl', 'cat', f'php{version}-fpm'],
+                    capture_output=True,
+                    text=True
+                )
+                if check_version.returncode == 0:
+                    installed_versions.append(version)
+            
+            installed_str = ', '.join(installed_versions) if installed_versions else 'none'
+            raise Exception(f"PHP {php_version} is not installed on this system. Available versions: {installed_str}")
         
         # Check if service is active
         result = subprocess.run(
@@ -226,8 +238,16 @@ server {{
         
         if ssl_enabled:
             config += f"""
-    # SSL redirect
-    return 301 https://$server_name$request_uri;
+    # Let's Encrypt ACME challenge (must be before SSL redirect)
+    location ^~ /.well-known/acme-challenge/ {{
+        allow all;
+        default_type "text/plain";
+    }}
+    
+    # SSL redirect (all other requests)
+    location / {{
+        return 301 https://$server_name$request_uri;
+    }}
 }}
 
 server {{

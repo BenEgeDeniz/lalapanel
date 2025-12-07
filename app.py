@@ -21,17 +21,20 @@ app.config.from_object(Config)
 
 # Template filters
 @app.template_filter('os_info')
-def os_info_filter():
+def os_info_filter(value):
+    """Template filter to display OS information. The value parameter is required by Jinja2 but not used."""
     import platform
     return f"{platform.system()} {platform.release()}"
 
 @app.template_filter('python_version')
-def python_version_filter():
+def python_version_filter(value):
+    """Template filter to display Python version. The value parameter is required by Jinja2 but not used."""
     import sys
     return f"{sys.version.split()[0]}"
 
 @app.template_filter('uptime')
-def uptime_filter():
+def uptime_filter(value):
+    """Template filter to display system uptime. The value parameter is required by Jinja2 but not used."""
     try:
         import psutil
         boot_time = psutil.boot_time()
