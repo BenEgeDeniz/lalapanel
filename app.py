@@ -1445,6 +1445,7 @@ def request_panel_ssl():
         flash('Panel domain not set', 'error')
         return redirect(url_for('panel_settings'))
     
+    panel_webroot = None
     try:
         # First, update panel nginx config to serve ACME challenges
         panel_webroot = site_manager.create_panel_nginx_config(panel_domain, ssl_enabled=False)
@@ -1460,6 +1461,12 @@ def request_panel_ssl():
         
         flash(f'SSL certificate obtained successfully for {panel_domain}', 'success')
     except Exception as e:
+        # If SSL cert request failed, revert to non-SSL config
+        if panel_webroot:
+            try:
+                site_manager.create_panel_nginx_config(panel_domain, ssl_enabled=False)
+            except:
+                pass  # Ignore errors during cleanup
         flash(f'Error requesting SSL certificate: {str(e)}', 'error')
     
     return redirect(url_for('panel_settings'))
