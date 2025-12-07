@@ -58,7 +58,9 @@ function copyToClipboard(text) {
 
 // Fallback copy method for older browsers
 // Note: document.execCommand('copy') is deprecated but kept for legacy browser support
-// TODO: Remove this fallback after determining minimum browser support requirements
+// TODO: Consider removing this fallback when dropping support for browsers older than:
+//       - Chrome 63 (2017), Firefox 53 (2017), Safari 13.1 (2020), Edge 79 (2020)
+//       These versions fully support the modern Clipboard API
 function fallbackCopyToClipboard(text) {
     const textArea = document.createElement('textarea');
     textArea.value = text;
@@ -85,9 +87,12 @@ function showCopyNotification(message, isError = false) {
     const notification = document.createElement('div');
     notification.className = `alert alert-${isError ? 'danger' : 'success'} position-fixed bottom-0 end-0 m-3`;
     notification.style.zIndex = '9999';
-    notification.innerHTML = `
-        <i class="bi bi-${isError ? 'x-circle' : 'check-circle'}"></i> ${message}
-    `;
+    
+    const icon = document.createElement('i');
+    icon.className = `bi bi-${isError ? 'x-circle' : 'check-circle'}`;
+    
+    notification.appendChild(icon);
+    notification.appendChild(document.createTextNode(' ' + message));
     
     document.body.appendChild(notification);
     
