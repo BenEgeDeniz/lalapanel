@@ -20,6 +20,8 @@
             </div>
             <div class="card-body">
                 <form method="POST" action="{{ url_for('create_ftp_user') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
                     <div class="mb-3">
                         <label for="site_id" class="form-label">Select Site *</label>
                         <select name="site_id" id="site_id" class="form-select" required>
@@ -115,6 +117,8 @@
                                     <form method="POST" action="{{ url_for('delete_ftp_user', user_id=user['id']) }}" 
                                           style="display: inline;" 
                                           data-confirm="⚠️ Are you sure you want to delete user {{ user['username']|e }}?&#10;&#10;This action cannot be undone!">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
                                         <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete user">
                                             <i class="bi bi-trash"></i>
                                         </button>

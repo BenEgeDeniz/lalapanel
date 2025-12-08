@@ -15,6 +15,8 @@
         <div class="card shadow-sm">
             <div class="card-body p-4">
                 <form method="POST" action="{{ url_for('create_site') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
                     <div class="mb-4">
                         <label for="domain" class="form-label fw-semibold">
                             <i class="bi bi-globe"></i> Domain Name *
