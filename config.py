@@ -37,9 +37,28 @@ class Config:
     MAX_LOGIN_ATTEMPTS = 5
     RATE_LIMIT_STORAGE_URL = 'memory://'
     
+    # Session Security
+    SESSION_COOKIE_SECURE = True  # Only send cookie over HTTPS
+    SESSION_COOKIE_HTTPONLY = True  # Prevent JavaScript access to session cookie
+    SESSION_COOKIE_SAMESITE = 'Lax'  # CSRF protection
+    PERMANENT_SESSION_LIFETIME = 3600  # 1 hour session timeout
+    
+    # CSRF Protection
+    WTF_CSRF_ENABLED = True
+    WTF_CSRF_TIME_LIMIT = None  # No time limit for CSRF tokens
+    
+    # File Upload Security
+    MAX_CONTENT_LENGTH = 100 * 1024 * 1024  # 100 MB max file upload
+    ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'zip', 'tar', 'gz', 
+                         'php', 'html', 'css', 'js', 'json', 'xml', 'svg', 'md', 'sql'}
+    
     # SSL
     LETSENCRYPT_EMAIL = os.environ.get('LETSENCRYPT_EMAIL', 'admin@localhost')
     CERTBOT_PATH = '/usr/bin/certbot'
+    
+    # Modern SSL/TLS cipher suite (Mozilla Intermediate compatibility)
+    # https://ssl-config.mozilla.org/
+    SSL_CIPHERS = 'ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384'
     
     # Panel settings
     PANEL_PORT = 8080

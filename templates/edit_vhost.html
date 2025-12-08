@@ -29,6 +29,8 @@
             </div>
             <div class="card-body">
                 <form method="POST" action="{{ url_for('save_vhost', site_id=site['id']) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
                     <div class="mb-3">
                         <textarea name="config_content" id="config-editor" class="form-control" 
                                   rows="30" style="font-family: 'Courier New', monospace; font-size: 14px;">{{ config_content }}</textarea>
@@ -77,7 +79,7 @@ document.getElementById('test-config').addEventListener('click', function() {
     testResultHeader.className = 'card-header bg-info text-white';
     testResultContent.textContent = 'Testing configuration...';
     
-    fetch('{{ url_for("test_nginx_config", site_id=site["id"]) }}', {
+    fetchWithCsrf('{{ url_for("test_nginx_config", site_id=site["id"]) }}', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',

@@ -29,6 +29,7 @@ class SiteManager:
         self.nginx_available = self._get_config_value('NGINX_SITES_AVAILABLE')
         self.nginx_enabled = self._get_config_value('NGINX_SITES_ENABLED')
         self.php_fpm_socket_dir = self._get_config_value('PHP_FPM_SOCKET_DIR')
+        self.ssl_ciphers = self._get_config_value('SSL_CIPHERS')
     
     def create_site_directories(self, domain):
         """Create directories for a new site"""
@@ -227,14 +228,19 @@ server {{
     
     # SSL settings
     ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_ciphers HIGH:!aNULL:!MD5;
-    ssl_prefer_server_ciphers on;
+    ssl_ciphers '{self.ssl_ciphers}';
+    ssl_prefer_server_ciphers off;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 1d;
+    ssl_session_tickets off;
     
     # Security headers
-    add_header Strict-Transport-Security "max-age=31536000" always;
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
     add_header X-Frame-Options "SAMEORIGIN" always;
     add_header X-Content-Type-Options "nosniff" always;
     add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Permissions-Policy "geolocation=(), microphone=(), camera=()" always;
     
     # PHP handling via PHP-FPM
     location ~ \\.php$ {{
@@ -289,6 +295,8 @@ server {{
     add_header X-Frame-Options "SAMEORIGIN" always;
     add_header X-Content-Type-Options "nosniff" always;
     add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Permissions-Policy "geolocation=(), microphone=(), camera=()" always;
     
     # PHP handling via PHP-FPM
     location ~ \\.php$ {{
@@ -494,13 +502,19 @@ server {{
     
     # SSL settings
     ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_ciphers ECDHE+AESGCM:ECDHE+CHACHA20:!DHE:!aNULL:!MD5:!DSS;
-    ssl_prefer_server_ciphers on;
+    ssl_ciphers '{self.ssl_ciphers}';
+    ssl_prefer_server_ciphers off;
     ssl_session_cache shared:SSL:10m;
     ssl_session_timeout 1d;
+    ssl_session_tickets off;
     
     # HSTS
-    add_header Strict-Transport-Security "max-age=31536000" always;
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Permissions-Policy "geolocation=(), microphone=(), camera=()" always;
     
     client_max_body_size 100M;
     

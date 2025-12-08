@@ -2,6 +2,32 @@
  * Lala Panel - Main JavaScript
  */
 
+// Get CSRF token from meta tag
+function getCsrfToken() {
+    const token = document.querySelector('meta[name="csrf-token"]');
+    return token ? token.getAttribute('content') : '';
+}
+
+// Helper to add CSRF token to fetch requests
+function fetchWithCsrf(url, options = {}) {
+    const csrfToken = getCsrfToken();
+    
+    // Initialize headers if not present
+    if (!options.headers) {
+        options.headers = {};
+    }
+    
+    // Add CSRF token header
+    options.headers['X-CSRFToken'] = csrfToken;
+    
+    // If body is FormData, append CSRF token
+    if (options.body instanceof FormData) {
+        options.body.append('csrf_token', csrfToken);
+    }
+    
+    return fetch(url, options);
+}
+
 // Initialize app when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
     // Alerts are now persistent - removed auto-dismiss

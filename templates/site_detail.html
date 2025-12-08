@@ -79,6 +79,8 @@
                     <i class="bi bi-exclamation-triangle"></i> SSL is not configured
                 </div>
                 <form method="POST" action="{{ url_for('request_ssl', site_id=site['id']) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
                     <div class="mb-3">
                         <label class="form-label">Request SSL Certificate:</label>
                         <select name="ssl_mode" class="form-select mb-2">
@@ -93,6 +95,8 @@
                 <hr>
                 <h6>Manual SSL Upload</h6>
                 <form method="POST" action="{{ url_for('upload_ssl', site_id=site['id']) }}" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
                     <div class="mb-2">
                         <label class="form-label small">Certificate (fullchain.pem):</label>
                         <input type="file" name="cert_file" class="form-control form-control-sm" required>
@@ -118,6 +122,8 @@
             </div>
             <div class="card-body">
                 <form method="POST" action="{{ url_for('update_site_php', site_id=site['id']) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
                     <div class="mb-3">
                         <label class="form-label">PHP Version:</label>
                         <select name="php_version" class="form-select">
@@ -174,6 +180,8 @@
                                 <form method="POST" action="{{ url_for('delete_database', db_id=db['id']) }}" 
                                       style="display: inline;" 
                                       data-confirm="⚠️ Delete database {{ db['db_name']|e }}?&#10;&#10;This action cannot be undone!">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
                                     <button type="submit" class="btn btn-outline-danger" title="Delete database">
                                         <i class="bi bi-trash"></i>
                                     </button>
@@ -238,6 +246,8 @@
                 <p class="text-muted">Once you delete a site, there is no going back. Please be certain.</p>
                 <form method="POST" action="{{ url_for('delete_site', site_id=site['id']) }}" 
                       data-confirm="Are you absolutely sure you want to delete {{ site['domain']|e }}? This action cannot be undone!">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
                     <button type="submit" class="btn btn-danger">
                         <i class="bi bi-trash"></i> Delete Site Permanently
                     </button>

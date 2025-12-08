@@ -325,7 +325,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('upload-progress').style.display = 'block';
         progressBar.style.width = '50%';
         
-        fetch(`/files/upload/${currentSiteId}`, {
+        fetchWithCsrf(`/files/upload/${currentSiteId}`, {
             method: 'POST',
             body: formData
         })
@@ -363,7 +363,7 @@ document.addEventListener('DOMContentLoaded', function() {
         formData.append('path', currentPath);
         formData.append('folder_name', folderName);
         
-        fetch(`/files/create-folder/${currentSiteId}`, {
+        fetchWithCsrf(`/files/create-folder/${currentSiteId}`, {
             method: 'POST',
             body: formData
         })
@@ -398,7 +398,7 @@ document.addEventListener('DOMContentLoaded', function() {
         formData.append('path', currentPath);
         formData.append('file_name', fileName);
         
-        fetch(`/files/create-file/${currentSiteId}`, {
+        fetchWithCsrf(`/files/create-file/${currentSiteId}`, {
             method: 'POST',
             body: formData
         })
@@ -441,7 +441,7 @@ document.addEventListener('DOMContentLoaded', function() {
         formData.append('archive_name', archiveName);
         formData.append('current_path', currentPath);
         
-        fetch(`/files/compress/${currentSiteId}`, {
+        fetchWithCsrf(`/files/compress/${currentSiteId}`, {
             method: 'POST',
             body: formData
         })
@@ -476,7 +476,7 @@ document.addEventListener('DOMContentLoaded', function() {
         formData.append('old_path', oldPath);
         formData.append('new_name', newName);
         
-        fetch(`/files/rename/${currentSiteId}`, {
+        fetchWithCsrf(`/files/rename/${currentSiteId}`, {
             method: 'POST',
             body: formData
         })
@@ -505,7 +505,7 @@ document.addEventListener('DOMContentLoaded', function() {
         formData.append('path', path);
         formData.append('content', content);
         
-        fetch(`/files/save/${currentSiteId}`, {
+        fetchWithCsrf(`/files/save/${currentSiteId}`, {
             method: 'POST',
             body: formData
         })
@@ -529,7 +529,7 @@ function loadDirectory(path) {
     document.getElementById('file-list-container').style.display = 'none';
     document.getElementById('empty-state').style.display = 'none';
     
-    fetch(`/files/browse/${currentSiteId}?path=${encodeURIComponent(path)}`)
+    fetchWithCsrf(`/files/browse/${currentSiteId}?path=${encodeURIComponent(path)}`)
         .then(response => response.json())
         .then(data => {
             if (data.error) {
@@ -681,7 +681,7 @@ function editFile(path, name) {
     modal.show();
     
     // Load file content
-    fetch(`/files/edit/${currentSiteId}?path=${encodeURIComponent(path)}`)
+    fetchWithCsrf(`/files/edit/${currentSiteId}?path=${encodeURIComponent(path)}`)
         .then(response => response.json())
         .then(data => {
             if (data.success) {
@@ -706,7 +706,7 @@ function extractZip(path) {
     const formData = new FormData();
     formData.append('path', path);
     
-    fetch(`/files/extract/${currentSiteId}`, {
+    fetchWithCsrf(`/files/extract/${currentSiteId}`, {
         method: 'POST',
         body: formData
     })
@@ -733,7 +733,7 @@ function deleteItem(path, isDir) {
     const formData = new FormData();
     formData.append('path', path);
     
-    fetch(`/files/delete/${currentSiteId}`, {
+    fetchWithCsrf(`/files/delete/${currentSiteId}`, {
         method: 'POST',
         body: formData
     })

@@ -29,6 +29,8 @@
                 </p>
                 <form method="POST" action="{{ url_for('restart_service') }}" 
                       data-confirm="Are you sure you want to restart Nginx? This will briefly interrupt web services.">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
                     <input type="hidden" name="service" value="nginx">
                     <button type="submit" class="btn btn-warning">
                         <i class="bi bi-arrow-repeat"></i> Restart Nginx
@@ -50,6 +52,8 @@
                 </p>
                 <form method="POST" action="{{ url_for('restart_service') }}" 
                       data-confirm="⚠️ Warning: Restarting MariaDB will disconnect all database connections!\n\nAre you sure?">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
                     <input type="hidden" name="service" value="mariadb">
                     <button type="submit" class="btn btn-warning">
                         <i class="bi bi-arrow-repeat"></i> Restart MariaDB
@@ -83,6 +87,8 @@
                                 </p>
                                 <form method="POST" action="{{ url_for('restart_service') }}" 
                                       data-confirm="Restart PHP {{ version }} FPM service?">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
                                     <input type="hidden" name="service" value="php{{ version }}-fpm">
                                     <button type="submit" class="btn btn-sm btn-warning">
                                         <i class="bi bi-arrow-repeat"></i> Restart

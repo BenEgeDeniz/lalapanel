@@ -29,6 +29,8 @@
             </div>
             <div class="card-body">
                 <form method="POST" action="{{ url_for('save_panel_settings') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
                     <div class="mb-3">
                         <label for="panel_domain" class="form-label">Panel Domain</label>
                         <input type="text" id="panel_domain" name="panel_domain" class="form-control" 
@@ -68,6 +70,8 @@
                 </div>
                 <p class="text-muted">Current domain: <code>{{ settings.panel_domain }}</code></p>
                 <form method="POST" action="{{ url_for('disable_panel_ssl') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
                     <button type="submit" class="btn btn-warning" 
                             onclick="return confirm('Disable SSL for the panel?')">
                         <i class="bi bi-shield-x"></i> Disable SSL
@@ -83,6 +87,8 @@
                     You can request a free SSL certificate from Let's Encrypt for your panel domain.
                 </p>
                 <form method="POST" action="{{ url_for('request_panel_ssl') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
                     <button type="submit" class="btn btn-primary">
                         <i class="bi bi-lock"></i> Request SSL Certificate
                     </button>
@@ -114,6 +120,8 @@
                 </div>
                 <form method="POST" action="{{ url_for('restart_panel_service') }}" 
                       data-confirm="⚠️ This will restart the panel and disconnect you!\n\nMake sure you know the new access URL before proceeding.">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
                     <button type="submit" class="btn btn-warning">
                         <i class="bi bi-arrow-repeat"></i> Restart Panel Service
                     </button>
