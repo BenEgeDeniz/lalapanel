@@ -68,9 +68,17 @@ def add_security_headers(response):
     response.headers['X-Frame-Options'] = 'SAMEORIGIN'
     response.headers['X-XSS-Protection'] = '1; mode=block'
     response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
-    # Only add HSTS if using HTTPS
+    # Only add HSTS and Secure cookie flag if using HTTPS
     if request.is_secure:
         response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+        # Dynamically add Secure flag to session cookies when accessed over HTTPS
+        if 'Set-Cookie' in response.headers:
+            cookies = response.headers.getlist('Set-Cookie')
+            response.headers.delete('Set-Cookie')
+            for cookie in cookies:
+                if 'session=' in cookie and 'Secure' not in cookie:
+                    cookie = cookie.rstrip(';') + '; Secure'
+                response.headers.add('Set-Cookie', cookie)
     return response
 
 # Template filters
