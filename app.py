@@ -1526,7 +1526,7 @@ if __name__ == '__main__':
     # Initialize components
     init_components()
     
-    # Ensure default server config exists to reject unknown domains
+    # Ensure default server config exists to reject unknown HTTPS domains
     try:
         default_config_path = os.path.join(app.config['NGINX_SITES_AVAILABLE'], '000-default')
         if not os.path.exists(default_config_path):
@@ -1536,6 +1536,17 @@ if __name__ == '__main__':
             subprocess.run(['/usr/bin/systemctl', 'reload', 'nginx'], check=False)
     except Exception as e:
         print(f"Warning: Could not create default server config: {e}")
+    
+    # Ensure panel nginx config exists to serve the panel on HTTP
+    try:
+        panel_config_path = os.path.join(app.config['NGINX_SITES_AVAILABLE'], 'lalapanel')
+        if not os.path.exists(panel_config_path):
+            print("Creating panel nginx configuration...")
+            site_manager.create_panel_nginx_config()
+            # Reload nginx to apply changes
+            subprocess.run(['/usr/bin/systemctl', 'reload', 'nginx'], check=False)
+    except Exception as e:
+        print(f"Warning: Could not create panel nginx config: {e}")
     
     # Clean old login attempts on startup
     db.clear_old_login_attempts()

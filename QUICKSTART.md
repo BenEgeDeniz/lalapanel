@@ -89,16 +89,19 @@ sudo systemctl status lalapanel
 ```bash
 sudo ufw allow 80/tcp
 sudo ufw allow 443/tcp
-sudo ufw allow 8080/tcp
 sudo ufw enable
 ```
+
+**Note**: Do NOT open port 8080. The panel runs on localhost and is accessed via Nginx on port 80/443.
 
 ### 7. Access the Panel
 
 Open your browser and navigate to:
 ```
-http://YOUR_SERVER_IP:8080
+http://YOUR_SERVER_IP
 ```
+
+The panel application runs on `localhost:8080` and is served through Nginx reverse proxy on port 80.
 
 Login with the credentials you created during installation.
 
@@ -173,8 +176,8 @@ sudo certbot renew
 # Check logs
 sudo journalctl -u lalapanel -n 50
 
-# Check port 8080
-sudo netstat -tulpn | grep 8080
+# Check port 8080 on localhost
+sudo netstat -tulpn | grep 127.0.0.1:8080
 
 # Ensure directories exist
 ls -la /etc/lalapanel
@@ -224,8 +227,8 @@ If you encounter issues:
 
 - Change default admin password
 - Set strong MariaDB root password
-- Configure firewall properly
+- Configure firewall properly (ports 80 and 443 only)
 - Keep system updated: `sudo apt update && sudo apt upgrade`
 - Regularly backup your sites and databases
-- Use SSL for the panel itself (reverse proxy)
-- Restrict panel access by IP if possible
+- The panel runs on localhost:8080, accessible only via Nginx proxy
+- Consider setting up SSL for the panel domain

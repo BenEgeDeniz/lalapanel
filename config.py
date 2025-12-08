@@ -43,4 +43,4 @@ class Config:
     
     # Panel settings
     PANEL_PORT = 8080
-    PANEL_HOST = '0.0.0.0'
+    PANEL_HOST = '127.0.0.1'  # Listen only on localhost for security

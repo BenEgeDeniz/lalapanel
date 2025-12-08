@@ -171,8 +171,10 @@ sudo journalctl -u lalapanel -f
 
 Open your browser and navigate to:
 ```
-http://YOUR_SERVER_IP:8080
+http://YOUR_SERVER_IP
 ```
+
+The panel runs on `localhost:8080` and is served through an Nginx reverse proxy on port 80. This ensures secure access and prevents direct connections to the Flask application.
 
 Login with the admin credentials you created during installation.
 
@@ -266,20 +268,22 @@ sftp username@your-server-ip
 sudo ufw allow 80/tcp
 sudo ufw allow 443/tcp
 
-# Allow panel (be careful with this!)
-sudo ufw allow 8080/tcp
-
 # Enable firewall
 sudo ufw enable
 ```
 
+**Note**: Port 8080 should NOT be exposed to the internet. The panel runs on `localhost:8080` and is accessed through Nginx reverse proxy on port 80/443.
+
 ### Securing the Panel
 
-It's recommended to:
-1. Use a reverse proxy with SSL for the panel itself
-2. Restrict panel access by IP
-3. Use strong passwords
-4. Keep the system updated
+The panel is automatically secured with the following measures:
+1. Flask app runs only on `localhost:8080` (not accessible from external IPs)
+2. Nginx reverse proxy handles all external access on ports 80/443
+3. You can further secure by:
+   - Setting up SSL for the panel domain
+   - Restricting access by IP in the Nginx configuration
+   - Using strong passwords
+   - Keeping the system updated
 
 ## File Permissions
 
@@ -297,8 +301,8 @@ Default permissions:
 # Check logs
 sudo journalctl -u lalapanel -n 50
 
-# Check if port is already in use
-sudo netstat -tulpn | grep 8080
+# Check if port 8080 is already in use on localhost
+sudo netstat -tulpn | grep 127.0.0.1:8080
 ```
 
 ### Site not accessible
