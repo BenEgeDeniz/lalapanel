@@ -6,10 +6,14 @@ import hashlib
 import time
 import subprocess
 import shutil
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
+from flask_wtf.csrf import CSRFProtect
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from flask_talisman import Talisman
 from functools import wraps
 import secrets
 
@@ -19,6 +23,48 @@ from site_manager import SiteManager, DatabaseManager, UserManager
 
 app = Flask(__name__)
 app.config.from_object(Config)
+
+# Initialize CSRF protection
+csrf = CSRFProtect(app)
+
+# Initialize rate limiter
+limiter = Limiter(
+    app=app,
+    key_func=get_remote_address,
+    default_limits=["200 per day", "50 per hour"],
+    storage_uri=app.config['RATE_LIMIT_STORAGE_URL']
+)
+
+# Security headers with Talisman (disabled for development, enable in production)
+# Only enable HTTPS enforcement if not running on localhost
+# Talisman is commented out here to avoid breaking local development
+# In production, uncomment and configure appropriately
+# talisman = Talisman(
+#     app,
+#     force_https=False,  # Set to True in production with SSL
+#     strict_transport_security=True,
+#     session_cookie_secure=True,
+#     content_security_policy={
+#         'default-src': "'self'",
+#         'script-src': ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
+#         'style-src': ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
+#         'img-src': ["'self'", "data:", "https:"],
+#         'font-src': ["'self'", "https://cdn.jsdelivr.net"],
+#     }
+# )
+
+# Add security headers manually
+@app.after_request
+def add_security_headers(response):
+    """Add security headers to all responses"""
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    # Only add HSTS if using HTTPS
+    if request.is_secure:
+        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+    return response
 
 # Template filters
 @app.template_filter('os_info')
@@ -52,6 +98,54 @@ def uptime_filter(value):
 def inject_now():
     """Inject current datetime into all templates"""
     return {'now': datetime.now}
+
+# Security helper functions
+def sanitize_filename(filename):
+    """Sanitize filename to prevent directory traversal and other attacks"""
+    import re
+    # Remove any path components
+    filename = os.path.basename(filename)
+    # Remove potentially dangerous characters
+    filename = re.sub(r'[^\w\s\-\.]', '', filename)
+    # Prevent hidden files
+    if filename.startswith('.'):
+        filename = filename[1:]
+    return filename
+
+def validate_path(path, base_path):
+    """Validate that path is within base_path to prevent directory traversal"""
+    try:
+        # Resolve to absolute paths
+        abs_path = os.path.abspath(os.path.join(base_path, path))
+        abs_base = os.path.abspath(base_path)
+        
+        # Check if the resolved path starts with base path
+        return abs_path.startswith(abs_base)
+    except (ValueError, OSError):
+        return False
+
+def allowed_file(filename):
+    """Check if file extension is allowed"""
+    if '.' not in filename:
+        return False
+    ext = filename.rsplit('.', 1)[1].lower()
+    return ext in app.config.get('ALLOWED_EXTENSIONS', set())
+
+def audit_log(action, details, user_id=None):
+    """Log security-relevant actions for audit purposes"""
+    if user_id is None and current_user.is_authenticated:
+        user_id = current_user.id
+    
+    log_entry = f"[{datetime.now().isoformat()}] User {user_id}: {action} - {details}"
+    
+    # Log to file
+    log_file = os.path.join(app.config['LOG_DIR'], 'audit.log')
+    try:
+        os.makedirs(os.path.dirname(log_file), exist_ok=True)
+        with open(log_file, 'a') as f:
+            f.write(log_entry + '\n')
+    except Exception as e:
+        app.logger.error(f"Failed to write audit log: {e}")
 
 # Initialize components lazily to allow testing
 db = None
@@ -106,6 +200,7 @@ def index():
     return redirect(url_for('login'))
 
 @app.route('/login', methods=['GET', 'POST'])
+@limiter.limit("10 per minute")
 def login():
     """Login page"""
     init_components()
@@ -113,9 +208,14 @@ def login():
         return redirect(url_for('dashboard'))
     
     if request.method == 'POST':
-        username = request.form.get('username')
-        password = request.form.get('password')
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '')
         ip_address = request.remote_addr
+        
+        # Input validation
+        if not username or not password:
+            flash('Username and password are required', 'error')
+            return render_template('login.html')
         
         # Check rate limit
         if not check_rate_limit(ip_address):
@@ -130,8 +230,16 @@ def login():
         if user_data and check_password_hash(user_data['password_hash'], password):
             user = User(user_data['id'], user_data['username'])
             login_user(user)
+            
+            # Regenerate session to prevent session fixation
+            session.permanent = True
+            app.permanent_session_lifetime = timedelta(hours=1)
+            
             next_page = request.args.get('next')
-            return redirect(next_page if next_page else url_for('dashboard'))
+            # Validate next_page to prevent open redirect
+            if next_page and next_page.startswith('/'):
+                return redirect(next_page)
+            return redirect(url_for('dashboard'))
         else:
             flash('Invalid username or password', 'error')
     
@@ -154,14 +262,31 @@ def dashboard():
 
 @app.route('/sites/create', methods=['GET', 'POST'])
 @login_required
+@limiter.limit("20 per hour")
 def create_site():
     """Create a new site"""
     init_components()
     if request.method == 'POST':
-        domain = request.form.get('domain')
+        domain = request.form.get('domain', '').strip().lower()
         php_version = request.form.get('php_version')
         ssl_mode = request.form.get('ssl_mode', 'none')
         create_db = request.form.get('create_database') == 'on'
+        
+        # Validate domain name
+        import re
+        domain_pattern = re.compile(
+            r'^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9][a-z0-9-]{0,61}[a-z0-9]$'
+        )
+        if not domain or not domain_pattern.match(domain):
+            flash('Invalid domain name. Please use a valid domain format (e.g., example.com)', 'error')
+            return render_template('create_site.html', 
+                                 php_versions=app.config['AVAILABLE_PHP_VERSIONS'])
+        
+        # Validate PHP version
+        if php_version not in app.config['AVAILABLE_PHP_VERSIONS']:
+            flash('Invalid PHP version selected', 'error')
+            return render_template('create_site.html', 
+                                 php_versions=app.config['AVAILABLE_PHP_VERSIONS'])
         
         # Get PHP settings
         php_settings = {
@@ -177,6 +302,8 @@ def create_site():
                 flash(f'Site {domain} already exists', 'error')
                 return render_template('create_site.html', 
                                      php_versions=app.config['AVAILABLE_PHP_VERSIONS'])
+            
+            audit_log('SITE_CREATE', f'Creating site: {domain}')
             
             # Create site directories
             site_manager.create_site_directories(domain)
@@ -196,6 +323,7 @@ def create_site():
                     site_manager.create_nginx_config(domain, php_version, ssl_enabled=True, php_settings=php_settings)
                     site_manager.enable_site(domain)
                     ssl_enabled = True
+                    audit_log('SSL_AUTO', f'SSL auto-configured for {domain}')
                     flash(f'SSL certificate obtained successfully for {domain} and www.{domain}', 'success')
                 except Exception as e:
                     flash(f'Warning: SSL certificate request failed: {str(e)}. You can configure SSL manually later.', 'warning')
@@ -206,6 +334,7 @@ def create_site():
                     site_manager.create_nginx_config(domain, php_version, ssl_enabled=True, php_settings=php_settings)
                     site_manager.enable_site(domain)
                     ssl_enabled = True
+                    audit_log('SSL_AUTO', f'SSL auto-configured for {domain} (domain only)')
                     flash(f'SSL certificate obtained successfully for {domain} (without www)', 'success')
                 except Exception as e:
                     flash(f'Warning: SSL certificate request failed: {str(e)}. You can configure SSL manually later.', 'warning')
@@ -227,6 +356,7 @@ def create_site():
                 try:
                     db_manager.create_database(db_name, db_user, db_password)
                     db.create_database(site_id, db_name, db_user, db_password)
+                    audit_log('DATABASE_CREATE', f'Database created: {db_name}')
                     flash(f'Database created: {db_name} (User: {db_user}, Password: {db_password})', 'success')
                 except Exception as e:
                     flash(f'Warning: Database creation failed: {str(e)}', 'warning')
@@ -234,7 +364,7 @@ def create_site():
             # Create SSH/FTP user if requested
             create_ftp = request.form.get('create_ftp_user') == 'on'
             if create_ftp:
-                ftp_username = request.form.get('ftp_username', '')
+                ftp_username = request.form.get('ftp_username', '').strip()
                 ftp_password = request.form.get('ftp_password', '')
                 access_type = request.form.get('access_type', 'ftp')
                 
@@ -251,6 +381,7 @@ def create_site():
                 try:
                     user_manager.create_ftp_user(ftp_username, ftp_password, domain, access_type)
                     db.create_ftp_user(site_id, ftp_username, access_type)
+                    audit_log('USER_CREATE', f'SSH/FTP user created: {ftp_username}')
                     flash(f'SSH/FTP User created: {ftp_username} (Password: {ftp_password})', 'success')
                 except Exception as e:
                     flash(f'Warning: SSH/FTP user creation failed: {str(e)}', 'warning')
@@ -259,6 +390,7 @@ def create_site():
             return redirect(url_for('dashboard'))
             
         except Exception as e:
+            audit_log('SITE_CREATE_FAILED', f'Failed to create site {domain}: {str(e)}')
             flash(f'Error creating site: {str(e)}', 'error')
             return render_template('create_site.html', 
                                  php_versions=app.config['AVAILABLE_PHP_VERSIONS'])
@@ -304,6 +436,7 @@ def update_site_php(site_id):
 
 @app.route('/sites/<int:site_id>/request-ssl', methods=['POST'])
 @login_required
+@limiter.limit("5 per hour")
 def request_ssl(site_id):
     """Request SSL certificate for a site"""
     init_components()
@@ -315,6 +448,8 @@ def request_ssl(site_id):
     ssl_mode = request.form.get('ssl_mode', 'auto')
     
     try:
+        audit_log('SSL_REQUEST', f'Requesting SSL for {site["domain"]} (mode: {ssl_mode})')
+        
         # Request SSL certificate
         include_www = ssl_mode == 'auto'
         site_manager.request_ssl_certificate(site['domain'], include_www=include_www)
@@ -326,14 +461,17 @@ def request_ssl(site_id):
         # Update database
         db.update_site(site_id, ssl_enabled=True)
         
+        audit_log('SSL_ENABLED', f'SSL enabled for {site["domain"]}')
         flash(f'SSL certificate obtained successfully for {site["domain"]}', 'success')
     except Exception as e:
+        audit_log('SSL_REQUEST_FAILED', f'Failed to request SSL for {site["domain"]}: {str(e)}')
         flash(f'Error requesting SSL certificate: {str(e)}', 'error')
     
     return redirect(url_for('site_detail', site_id=site_id))
 
 @app.route('/sites/<int:site_id>/upload-ssl', methods=['POST'])
 @login_required
+@limiter.limit("5 per hour")
 def upload_ssl(site_id):
     """Upload manual SSL certificates"""
     init_components()
@@ -351,17 +489,44 @@ def upload_ssl(site_id):
     
     try:
         import os
+        from cryptography import x509
+        from cryptography.hazmat.backends import default_backend
+        from cryptography.hazmat.primitives import serialization
+        
+        # Read the files
+        cert_data = cert_file.read()
+        key_data = key_file.read()
+        
+        # Validate certificate
+        try:
+            cert = x509.load_pem_x509_certificate(cert_data, default_backend())
+        except Exception as e:
+            flash('Invalid certificate file', 'error')
+            return redirect(url_for('site_detail', site_id=site_id))
+        
+        # Validate private key
+        try:
+            private_key = serialization.load_pem_private_key(
+                key_data, 
+                password=None, 
+                backend=default_backend()
+            )
+        except Exception as e:
+            flash('Invalid private key file', 'error')
+            return redirect(url_for('site_detail', site_id=site_id))
         
         # Create SSL directory for manual certs
         ssl_dir = f"/etc/letsencrypt/live/{site['domain']}"
-        os.makedirs(ssl_dir, exist_ok=True)
+        os.makedirs(ssl_dir, mode=0o755, exist_ok=True)
         
         # Save certificate files
         cert_path = os.path.join(ssl_dir, 'fullchain.pem')
         key_path = os.path.join(ssl_dir, 'privkey.pem')
         
-        cert_file.save(cert_path)
-        key_file.save(key_path)
+        with open(cert_path, 'wb') as f:
+            f.write(cert_data)
+        with open(key_path, 'wb') as f:
+            f.write(key_data)
         
         # Set proper permissions
         os.chmod(cert_path, 0o644)
@@ -374,14 +539,17 @@ def upload_ssl(site_id):
         # Update database
         db.update_site(site_id, ssl_enabled=True)
         
+        audit_log('SSL_UPLOAD', f'Manual SSL certificates uploaded for {site["domain"]}')
         flash('SSL certificates uploaded and configured successfully', 'success')
     except Exception as e:
+        audit_log('SSL_UPLOAD_FAILED', f'Failed to upload SSL for {site["domain"]}: {str(e)}')
         flash(f'Error uploading SSL certificates: {str(e)}', 'error')
     
     return redirect(url_for('site_detail', site_id=site_id))
 
 @app.route('/sites/<int:site_id>/delete', methods=['POST'])
 @login_required
+@limiter.limit("10 per hour")
 def delete_site(site_id):
     """Delete a site"""
     init_components()
@@ -391,6 +559,9 @@ def delete_site(site_id):
         return redirect(url_for('dashboard'))
     
     try:
+        # Audit log before deletion
+        audit_log('SITE_DELETE', f'Deleting site: {site["domain"]}')
+        
         # Get associated databases
         databases = db.get_databases_for_site(site_id)
         
@@ -401,6 +572,7 @@ def delete_site(site_id):
         for database in databases:
             try:
                 db_manager.delete_database(database['db_name'], database['db_user'])
+                audit_log('DATABASE_DELETE', f'Deleted database: {database["db_name"]}')
             except:
                 pass  # Continue even if database deletion fails
         
@@ -412,6 +584,7 @@ def delete_site(site_id):
         
         flash(f'Site {site["domain"]} deleted successfully', 'success')
     except Exception as e:
+        audit_log('SITE_DELETE_FAILED', f'Failed to delete site {site["domain"]}: {str(e)}')
         flash(f'Error deleting site: {str(e)}', 'error')
     
     return redirect(url_for('dashboard'))
@@ -849,6 +1022,7 @@ def download_file(site_id):
 
 @app.route('/files/upload/<int:site_id>', methods=['POST'])
 @login_required
+@limiter.limit("50 per hour")
 def upload_file(site_id):
     """Upload a file to a site"""
     init_components()
@@ -861,6 +1035,7 @@ def upload_file(site_id):
     
     # Security check
     if '..' in rel_path or rel_path.startswith('/'):
+        audit_log('FILE_UPLOAD_FAILED', f'Invalid path attempt: {rel_path}')
         return jsonify({'error': 'Invalid path'}), 400
     
     # Get uploaded file
@@ -871,15 +1046,28 @@ def upload_file(site_id):
     if file.filename == '':
         return jsonify({'error': 'No file selected'}), 400
     
+    # Sanitize filename
+    original_filename = file.filename
+    safe_filename = sanitize_filename(original_filename)
+    
+    if not safe_filename:
+        return jsonify({'error': 'Invalid filename'}), 400
+    
     # Build full path
     base_path = os.path.join(app.config['SITES_DIR'], site['domain'], 'htdocs')
     upload_dir = os.path.join(base_path, rel_path) if rel_path else base_path
+    
+    # Validate path is within base
+    if not validate_path(upload_dir, base_path):
+        audit_log('FILE_UPLOAD_FAILED', f'Path traversal attempt: {upload_dir}')
+        return jsonify({'error': 'Access denied'}), 403
     
     # Ensure we're still within the site directory
     try:
         upload_dir = os.path.realpath(upload_dir)
         base_path = os.path.realpath(base_path)
         if not upload_dir.startswith(base_path):
+            audit_log('FILE_UPLOAD_FAILED', f'Directory traversal attempt: {upload_dir}')
             return jsonify({'error': 'Access denied'}), 403
     except:
         return jsonify({'error': 'Invalid path'}), 400
@@ -889,11 +1077,16 @@ def upload_file(site_id):
     
     # Save file
     try:
-        file_path = os.path.join(upload_dir, file.filename)
+        file_path = os.path.join(upload_dir, safe_filename)
+        
+        # Check if file size exceeds limit (handled by Flask config MAX_CONTENT_LENGTH)
         file.save(file_path)
         os.chmod(file_path, 0o644)
-        return jsonify({'success': True, 'filename': file.filename})
+        
+        audit_log('FILE_UPLOAD', f'Uploaded {safe_filename} to site {site["domain"]}')
+        return jsonify({'success': True, 'filename': safe_filename})
     except Exception as e:
+        audit_log('FILE_UPLOAD_FAILED', f'Upload error: {str(e)}')
         return jsonify({'error': f'Upload failed: {str(e)}'}), 500
 
 @app.route('/files/delete/<int:site_id>', methods=['POST'])

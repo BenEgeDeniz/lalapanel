@@ -37,6 +37,21 @@ class Config:
     MAX_LOGIN_ATTEMPTS = 5
     RATE_LIMIT_STORAGE_URL = 'memory://'
     
+    # Session Security
+    SESSION_COOKIE_SECURE = True  # Only send cookie over HTTPS
+    SESSION_COOKIE_HTTPONLY = True  # Prevent JavaScript access to session cookie
+    SESSION_COOKIE_SAMESITE = 'Lax'  # CSRF protection
+    PERMANENT_SESSION_LIFETIME = 3600  # 1 hour session timeout
+    
+    # CSRF Protection
+    WTF_CSRF_ENABLED = True
+    WTF_CSRF_TIME_LIMIT = None  # No time limit for CSRF tokens
+    
+    # File Upload Security
+    MAX_CONTENT_LENGTH = 100 * 1024 * 1024  # 100 MB max file upload
+    ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif', 'zip', 'tar', 'gz', 
+                         'php', 'html', 'css', 'js', 'json', 'xml', 'svg', 'md', 'sql'}
+    
     # SSL
     LETSENCRYPT_EMAIL = os.environ.get('LETSENCRYPT_EMAIL', 'admin@localhost')
     CERTBOT_PATH = '/usr/bin/certbot'
