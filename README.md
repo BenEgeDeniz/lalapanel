@@ -1,4 +1,6 @@
-# 🚀 Lala Panel
+# 🚀 Lala Panel - Fully Vibecoded!
+
+### This project was generated entirely by automated Copilot agents. No manual review, verification, or quality assurance has been performed. The code may contain errors, omissions, security vulnerabilities, or incorrect behavior. It should not be relied upon for any production use, safety-critical tasks, or decision-making. Use this project strictly for testing and experimentation purposes and at your own risk.
 
 A minimal, lightweight hosting control panel designed specifically for PHP-based websites with modern Bootstrap UI.
 
