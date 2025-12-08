@@ -38,7 +38,7 @@ class Config:
     RATE_LIMIT_STORAGE_URL = 'memory://'
     
     # Session Security
-    SESSION_COOKIE_SECURE = True  # Only send cookie over HTTPS
+    SESSION_COOKIE_SECURE = False  # Set dynamically based on request scheme (HTTP/HTTPS)
     SESSION_COOKIE_HTTPONLY = True  # Prevent JavaScript access to session cookie
     SESSION_COOKIE_SAMESITE = 'Lax'  # CSRF protection
     PERMANENT_SESSION_LIFETIME = 3600  # 1 hour session timeout
