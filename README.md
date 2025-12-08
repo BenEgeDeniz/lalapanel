@@ -4,17 +4,27 @@ A minimal, lightweight hosting control panel designed specifically for PHP-based
 
 ## Features
 
-- **Simple Site Management**: Create and delete websites with ease
-- **PHP-FPM Support**: Multiple PHP version support with hot-switching capability
+- **Site Management**: Create, manage, and delete websites with ease
+- **PHP-FPM Support**: Multiple PHP version support (8.5, 8.4, 8.3, 8.2, 8.1) with hot-switching capability
 - **Flexible SSL Options**: 
-  - Automatic Let's Encrypt certificate generation
+  - Automatic Let's Encrypt certificate generation for sites and panel
   - Manual SSL certificate upload
   - Domain-only SSL (skip www subdomain)
-- **PHP Settings**: Configurable upload limits, memory limits, and execution time
-- **MariaDB Integration**: Built-in database management
-- **SSH/FTP User Management**: Create secure SFTP/SSH users for site file access
+- **File Manager**: Full-featured web-based file manager with:
+  - Browse, upload, download, delete files and folders
+  - Create, rename, edit files directly in browser
+  - Compress/extract archives (zip, tar, tar.gz, tar.bz2)
+  - Syntax highlighting for code files
+- **Configuration Editors**: 
+  - Direct Nginx vhost editing with syntax validation
+  - PHP.ini customization per site
+- **Database Management**: Complete MariaDB database operations
+- **SSH/FTP User Management**: Create secure SFTP/SSH users with site-specific access
+- **System Information**: Real-time monitoring of system resources, services, and processes
+- **Service Manager**: Start, stop, restart system services (Nginx, PHP-FPM, MariaDB, etc.)
+- **Panel Settings**: Configure panel port, enable SSL for the panel itself
 - **Modern UI**: Professional Bootstrap 5 interface with responsive design
-- **Security-First**: HTTPS enforcement, rate-limited login, isolated site configurations
+- **Security-First**: HTTPS enforcement, rate-limited login, isolated site configurations, path traversal protection
 
 ## Tech Stack
 
@@ -44,6 +54,8 @@ A minimal, lightweight hosting control panel designed specifically for PHP-based
 /etc/nginx/sites-enabled/   # Enabled sites
 
 /run/php/                  # PHP-FPM sockets
+  ├── php8.5-fpm.sock
+  ├── php8.4-fpm.sock
   ├── php8.3-fpm.sock
   ├── php8.2-fpm.sock
   └── php8.1-fpm.sock
@@ -72,7 +84,7 @@ sudo bash install.sh
 
 The installation script will:
 1. Install Nginx, MariaDB, certbot, and system dependencies
-2. Install PHP-FPM for PHP 8.1, 8.2, and 8.3
+2. Install PHP-FPM for PHP 8.5, 8.4, 8.3, 8.2, and 8.1
 3. Install Lala Panel application
 4. Create systemd service
 5. Prompt for admin credentials
@@ -135,7 +147,7 @@ sudo add-apt-repository -y ppa:ondrej/php
 sudo apt-get update
 
 # Install PHP-FPM for each version
-for version in 8.3 8.2 8.1; do
+for version in 8.5 8.4 8.3 8.2 8.1; do
     sudo apt-get install -y \
         php${version}-fpm \
         php${version}-cli \
@@ -183,7 +195,7 @@ Login with the admin credentials you created during installation.
 1. Log in to the panel
 2. Click "Create New Site"
 3. Enter domain name (e.g., example.com)
-4. Select PHP version (8.1, 8.2, or 8.3)
+4. Select PHP version (8.5, 8.4, 8.3, 8.2, or 8.1)
 5. Choose SSL configuration:
    - **Automatic SSL**: Request Let's Encrypt certificate for domain and www subdomain
    - **Domain Only SSL**: Skip www subdomain (useful when DNS is not configured for www)
@@ -204,6 +216,10 @@ The panel will:
 
 - **View Sites**: Dashboard shows all sites with SSL status and PHP version
 - **Update PHP Version**: Change PHP version from site detail page
+- **Edit Configuration**: 
+  - Edit Nginx vhost configuration directly with syntax testing
+  - Customize PHP.ini settings per site
+- **File Management**: Web-based file manager with full CRUD operations
 - **SSL Management**: 
   - Request Let's Encrypt SSL for existing sites
   - Upload manual SSL certificates
@@ -235,7 +251,7 @@ The panel will:
 
 Create secure users for file access:
 
-1. Navigate to "SSH/FTP" from the menu
+1. Navigate to "SSH/FTP Users" from the menu
 2. Click "Create SSH/FTP User"
 3. Select a site
 4. Enter username (lowercase, numbers, underscores only)
@@ -251,6 +267,83 @@ Users are automatically restricted to their site directory for security.
 sftp username@your-server-ip
 # Or use GUI clients like FileZilla, WinSCP, Cyberduck
 ```
+
+### File Manager
+
+The built-in file manager provides comprehensive file operations:
+
+1. Navigate to "File Manager" from the menu
+2. Select a site to manage its files
+3. Available operations:
+   - **Browse**: Navigate through directories
+   - **Upload**: Upload multiple files via drag-and-drop or file selector
+   - **Download**: Download individual files
+   - **Create**: Create new files and folders
+   - **Edit**: Edit text files with syntax highlighting
+   - **Rename**: Rename files and folders
+   - **Delete**: Delete files and folders
+   - **Compress**: Create zip/tar archives from files/folders
+   - **Extract**: Extract zip/tar/tar.gz/tar.bz2 archives
+
+All file operations include security checks to prevent directory traversal attacks.
+
+### System Information
+
+Monitor your server health and resources:
+
+1. Navigate to "System Info" from the menu
+2. View real-time information:
+   - System uptime and load average
+   - CPU usage and details
+   - Memory usage (RAM and swap)
+   - Disk usage for all mounted filesystems
+   - Network interface statistics
+   - Running processes
+
+### Service Manager
+
+Manage system services from the web interface:
+
+1. Navigate to "Service Manager" from the menu
+2. View status of critical services:
+   - Nginx web server
+   - PHP-FPM versions (8.5, 8.4, 8.3, 8.2, 8.1)
+   - MariaDB database
+   - Lala Panel itself
+3. Restart services as needed with one click
+
+### Panel Settings
+
+Configure the panel itself:
+
+1. Navigate to "Settings" from the menu
+2. Configure panel options:
+   - **Panel Port**: Change the port the panel runs on (default: 8080)
+   - **Panel SSL**: Enable HTTPS for the panel interface
+   - Request Let's Encrypt certificate for panel domain
+   - Disable SSL if needed
+
+### Configuration Editing
+
+Advanced users can directly edit configurations:
+
+**Nginx Vhost Editing:**
+1. Go to site details
+2. Click "Edit Vhost"
+3. Modify Nginx configuration directly
+4. Test configuration before applying
+5. Changes reload Nginx automatically
+
+**PHP.ini Customization:**
+1. Go to site details
+2. Click "Edit PHP.ini"
+3. Customize PHP settings per site:
+   - memory_limit
+   - upload_max_filesize
+   - post_max_size
+   - max_execution_time
+   - And more...
+4. Changes reload PHP-FPM automatically
 
 ## Security
 
@@ -277,10 +370,11 @@ sudo ufw enable
 ### Securing the Panel
 
 The panel is automatically secured with the following measures:
-1. Flask app runs only on `localhost:8080` (not accessible from external IPs)
+1. Flask app runs only on `localhost:8080` by default (not accessible from external IPs)
 2. Nginx reverse proxy handles all external access on ports 80/443
 3. You can further secure by:
-   - Setting up SSL for the panel domain
+   - Enabling SSL for the panel via Settings page
+   - Changing the panel port via Settings page
    - Restricting access by IP in the Nginx configuration
    - Using strong passwords
    - Keeping the system updated
@@ -373,7 +467,7 @@ lalapanel/
 ├── app.py              # Main Flask application
 ├── config.py           # Configuration settings
 ├── database.py         # Database models and operations
-├── site_manager.py     # Site and database management
+├── site_manager.py     # Site, database, and user management
 ├── requirements.txt    # Python dependencies
 ├── install.sh          # Installation script
 ├── templates/          # HTML templates
@@ -382,7 +476,14 @@ lalapanel/
 │   ├── dashboard.html
 │   ├── create_site.html
 │   ├── site_detail.html
-│   └── databases.html
+│   ├── databases.html
+│   ├── users.html
+│   ├── file_manager.html
+│   ├── edit_vhost.html
+│   ├── edit_php_ini.html
+│   ├── system_info.html
+│   ├── service_manager.html
+│   └── panel_settings.html
 └── static/             # Static assets
     ├── css/
     │   └── style.css
@@ -390,17 +491,15 @@ lalapanel/
         └── main.js
 ```
 
-## Limitations
+## Current Limitations
 
-By design, Lala Panel does **NOT** include:
-- Backup features
-- Email services
-- DNS management
-- Multi-server support
-- File manager
-- Cron management
+**Lala Panel does NOT include:**
+- Automated backup features (you should implement your own backup strategy)
+- Email services (MTA/mail server management)
+- DNS management (use your DNS provider's interface)
+- Multi-server support (single server only)
 
-These features may be added in future versions.
+**Note**: Many features have been added since the initial release. The panel now includes a comprehensive file manager, configuration editors, system monitoring, and service management.
 
 ## Contributing
 

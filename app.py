@@ -6,6 +6,7 @@ import hashlib
 import time
 import subprocess
 import shutil
+from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -45,6 +46,12 @@ def uptime_filter(value):
         return f"{days}d {hours}h {minutes}m"
     except:
         return "Unknown"
+
+# Template context processor
+@app.context_processor
+def inject_now():
+    """Inject current datetime into all templates"""
+    return {'now': datetime.now}
 
 # Initialize components lazily to allow testing
 db = None
