@@ -76,8 +76,10 @@ def add_security_headers(response):
             cookies = response.headers.getlist('Set-Cookie')
             response.headers.delete('Set-Cookie')
             for cookie in cookies:
-                if 'session=' in cookie and 'Secure' not in cookie:
-                    cookie = cookie.rstrip(';') + '; Secure'
+                # Match session cookie specifically (starts with 'session=')
+                if cookie.startswith('session=') and 'Secure' not in cookie:
+                    # Append Secure flag to cookie attributes
+                    cookie = cookie + '; Secure'
                 response.headers.add('Set-Cookie', cookie)
     return response
 
