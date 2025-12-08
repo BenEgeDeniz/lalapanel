@@ -73,13 +73,16 @@ def add_security_headers(response):
         response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
         # Dynamically add Secure flag to session cookies when accessed over HTTPS
         if 'Set-Cookie' in response.headers:
+            session_cookie_name = app.config.get('SESSION_COOKIE_NAME', 'session')
             cookies = response.headers.getlist('Set-Cookie')
             response.headers.delete('Set-Cookie')
             for cookie in cookies:
-                # Match session cookie specifically (starts with 'session=')
-                if cookie.startswith('session=') and 'Secure' not in cookie:
-                    # Append Secure flag to cookie attributes
-                    cookie = cookie + '; Secure'
+                # Match session cookie by name and check if Secure attribute is not already set
+                if cookie.startswith(f'{session_cookie_name}='):
+                    # Check if Secure attribute is already present (as ;Secure or ; Secure)
+                    if not (';Secure' in cookie or '; Secure' in cookie):
+                        # Append Secure flag to cookie attributes
+                        cookie = cookie + '; Secure'
                 response.headers.add('Set-Cookie', cookie)
     return response
 
