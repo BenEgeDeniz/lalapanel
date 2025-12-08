@@ -6,6 +6,7 @@ import hashlib
 import time
 import subprocess
 import shutil
+import re
 from datetime import datetime, timedelta
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
@@ -16,6 +17,9 @@ from flask_limiter.util import get_remote_address
 from flask_talisman import Talisman
 from functools import wraps
 import secrets
+from cryptography import x509
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives import serialization
 
 from config import Config
 from database import Database
@@ -23,6 +27,9 @@ from site_manager import SiteManager, DatabaseManager, UserManager
 
 app = Flask(__name__)
 app.config.from_object(Config)
+
+# Set permanent session lifetime
+app.permanent_session_lifetime = timedelta(hours=1)
 
 # Initialize CSRF protection
 csrf = CSRFProtect(app)
@@ -231,9 +238,8 @@ def login():
             user = User(user_data['id'], user_data['username'])
             login_user(user)
             
-            # Regenerate session to prevent session fixation
+            # Set session as permanent to use the configured session timeout
             session.permanent = True
-            app.permanent_session_lifetime = timedelta(hours=1)
             
             next_page = request.args.get('next')
             # Validate next_page to prevent open redirect
@@ -488,11 +494,6 @@ def upload_ssl(site_id):
         return redirect(url_for('site_detail', site_id=site_id))
     
     try:
-        import os
-        from cryptography import x509
-        from cryptography.hazmat.backends import default_backend
-        from cryptography.hazmat.primitives import serialization
-        
         # Read the files
         cert_data = cert_file.read()
         key_data = key_file.read()
@@ -515,9 +516,9 @@ def upload_ssl(site_id):
             flash('Invalid private key file', 'error')
             return redirect(url_for('site_detail', site_id=site_id))
         
-        # Create SSL directory for manual certs
+        # Create SSL directory for manual certs with restrictive permissions
         ssl_dir = f"/etc/letsencrypt/live/{site['domain']}"
-        os.makedirs(ssl_dir, mode=0o755, exist_ok=True)
+        os.makedirs(ssl_dir, mode=0o700, exist_ok=True)
         
         # Save certificate files
         cert_path = os.path.join(ssl_dir, 'fullchain.pem')

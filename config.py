@@ -56,6 +56,10 @@ class Config:
     LETSENCRYPT_EMAIL = os.environ.get('LETSENCRYPT_EMAIL', 'admin@localhost')
     CERTBOT_PATH = '/usr/bin/certbot'
     
+    # Modern SSL/TLS cipher suite (Mozilla Intermediate compatibility)
+    # https://ssl-config.mozilla.org/
+    SSL_CIPHERS = 'ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384'
+    
     # Panel settings
     PANEL_PORT = 8080
     PANEL_HOST = '127.0.0.1'  # Listen only on localhost for security

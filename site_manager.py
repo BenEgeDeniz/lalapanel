@@ -29,6 +29,7 @@ class SiteManager:
         self.nginx_available = self._get_config_value('NGINX_SITES_AVAILABLE')
         self.nginx_enabled = self._get_config_value('NGINX_SITES_ENABLED')
         self.php_fpm_socket_dir = self._get_config_value('PHP_FPM_SOCKET_DIR')
+        self.ssl_ciphers = self._get_config_value('SSL_CIPHERS')
     
     def create_site_directories(self, domain):
         """Create directories for a new site"""
@@ -227,7 +228,7 @@ server {{
     
     # SSL settings
     ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_ciphers 'ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384';
+    ssl_ciphers '{self.ssl_ciphers}';
     ssl_prefer_server_ciphers off;
     ssl_session_cache shared:SSL:10m;
     ssl_session_timeout 1d;
@@ -501,7 +502,7 @@ server {{
     
     # SSL settings
     ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_ciphers 'ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305:DHE-RSA-AES128-GCM-SHA256:DHE-RSA-AES256-GCM-SHA384';
+    ssl_ciphers '{self.ssl_ciphers}';
     ssl_prefer_server_ciphers off;
     ssl_session_cache shared:SSL:10m;
     ssl_session_timeout 1d;
