@@ -16,7 +16,8 @@
     <div class="col-12">
         <div class="alert alert-info">
             <i class="bi bi-info-circle"></i>
-            Configure your Lala Panel settings. Changes to domain and port require a panel restart to take effect.
+            Configure your Lala Panel settings. The panel is served via Nginx reverse proxy on port 80/443. 
+            The panel port setting is for internal backend communication only.
         </div>
     </div>
     
@@ -33,16 +34,16 @@
                         <input type="text" id="panel_domain" name="panel_domain" class="form-control" 
                                value="{{ settings.panel_domain }}" placeholder="panel.example.com">
                         <div class="form-text">
-                            Optional: Set a custom domain for the panel. Leave empty to access via IP:PORT.
+                            Optional: Set a custom domain for the panel. The panel is accessed via Nginx on port 80/443.
                         </div>
                     </div>
                     
                     <div class="mb-3">
-                        <label for="panel_port" class="form-label">Panel Port</label>
+                        <label for="panel_port" class="form-label">Panel Port (Backend Only)</label>
                         <input type="number" id="panel_port" name="panel_port" class="form-control" 
                                value="{{ settings.panel_port }}" min="1" max="65535" required>
                         <div class="form-text">
-                            Port number for the panel (1-65535). Default is 8080.
+                            Internal port for the Flask backend (1-65535). Default is 8080. Users access the panel via Nginx on port 80/443, not this port.
                         </div>
                     </div>
                     
@@ -104,12 +105,12 @@
             </div>
             <div class="card-body">
                 <p class="text-muted mb-3">
-                    After changing the panel domain or port, you need to restart the panel service for changes to take effect.
+                    After changing the panel domain or backend port, you need to restart the panel service for changes to take effect.
                 </p>
                 <div class="alert alert-warning">
                     <i class="bi bi-exclamation-triangle"></i>
                     <strong>Note:</strong> Restarting the panel will disconnect you. 
-                    Wait about 10 seconds then access the panel via the new domain/port.
+                    Wait about 10 seconds then access the panel via Nginx (port 80/443).
                 </div>
                 <form method="POST" action="{{ url_for('restart_panel_service') }}" 
                       data-confirm="⚠️ This will restart the panel and disconnect you!\n\nMake sure you know the new access URL before proceeding.">
@@ -134,10 +135,11 @@
                             <th width="30%">Access URL:</th>
                             <td>
                                 {% if settings.panel_domain %}
-                                <code>{% if settings.panel_ssl_enabled == '1' %}https{% else %}http{% endif %}://{{ settings.panel_domain }}{% if settings.panel_port not in ['80', '443'] %}:{{ settings.panel_port }}{% endif %}</code>
+                                <code>{% if settings.panel_ssl_enabled == '1' %}https{% else %}http{% endif %}://{{ settings.panel_domain }}</code>
                                 {% else %}
-                                <code>http://SERVER_IP:{{ settings.panel_port }}</code>
+                                <code>http://SERVER_IP</code>
                                 {% endif %}
+                                <small class="text-muted d-block">Served via Nginx on port 80/443</small>
                             </td>
                         </tr>
                         <tr>
@@ -145,8 +147,11 @@
                             <td><code>{{ settings.panel_domain if settings.panel_domain else 'Not set' }}</code></td>
                         </tr>
                         <tr>
-                            <th>Panel Port:</th>
-                            <td><code>{{ settings.panel_port }}</code></td>
+                            <th>Backend Port:</th>
+                            <td>
+                                <code>{{ settings.panel_port }}</code>
+                                <small class="text-muted d-block">Internal Flask backend port (not directly accessible)</small>
+                            </td>
                         </tr>
                         <tr>
                             <th>SSL Status:</th>
