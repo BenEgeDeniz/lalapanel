@@ -77,10 +77,13 @@ def add_security_headers(response):
             cookies = response.headers.getlist('Set-Cookie')
             response.headers.delete('Set-Cookie')
             for cookie in cookies:
-                # Match session cookie by name and check if Secure attribute is not already set
-                if cookie.startswith(f'{session_cookie_name}='):
-                    # Check if Secure attribute is already present (as ;Secure or ; Secure)
-                    if not (';Secure' in cookie or '; Secure' in cookie):
+                # Extract cookie name (before the '=' sign) for precise matching
+                cookie_name = cookie.split('=')[0] if '=' in cookie else ''
+                # Match session cookie by exact name and check if Secure attribute is not already set
+                if cookie_name == session_cookie_name:
+                    # Check if Secure attribute is already present (case-insensitive per RFC 6265)
+                    cookie_lower = cookie.lower()
+                    if not (';secure' in cookie_lower or '; secure' in cookie_lower):
                         # Append Secure flag to cookie attributes
                         cookie = cookie + '; Secure'
                 response.headers.add('Set-Cookie', cookie)
