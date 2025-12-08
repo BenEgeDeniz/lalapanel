@@ -46,6 +46,13 @@ def uptime_filter(value):
     except:
         return "Unknown"
 
+# Template context processor
+@app.context_processor
+def inject_now():
+    """Inject current datetime into all templates"""
+    from datetime import datetime
+    return {'now': datetime.now}
+
 # Initialize components lazily to allow testing
 db = None
 site_manager = None
