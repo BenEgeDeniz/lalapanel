@@ -8,11 +8,6 @@ A minimal, lightweight hosting control panel designed specifically for PHP-based
 
 - **Site Management**: Create, manage, and delete websites with ease
 - **PHP-FPM Support**: Multiple PHP version support (8.5, 8.4, 8.3, 8.2, 8.1) with hot-switching capability
-- **Passkey Authentication**: Modern passwordless login using WebAuthn
-  - Support for all authenticator types (platform, cross-platform, security keys)
-  - Biometric authentication (Face ID, Touch ID, Windows Hello)
-  - USB security key support (YubiKey, etc.)
-  - Full credential management (register, rename, delete)
 - **Flexible SSL Options**: 
   - Automatic Let's Encrypt certificate generation for sites and panel
   - Manual SSL certificate upload
@@ -196,57 +191,6 @@ http://YOUR_SERVER_IP
 The panel runs on `localhost:8080` and is served through an Nginx reverse proxy on port 80. This ensures secure access and prevents direct connections to the Flask application.
 
 Login with the admin credentials you created during installation.
-
-### Passkey Authentication
-
-Lala Panel supports modern passwordless authentication using passkeys (WebAuthn):
-
-**What are Passkeys?**
-- Passwordless login using biometrics (Face ID, Touch ID, Windows Hello)
-- USB security keys (YubiKey, Titan Key, etc.)
-- More secure than passwords - resistant to phishing and credential theft
-- Works across devices and platforms
-
-**Setting Up Passkeys:**
-
-1. Log in to the panel with your username and password
-2. Navigate to "Passkeys" in the menu
-3. Click "Register New Passkey"
-4. Follow the prompts on your device to create the passkey
-5. Give your passkey a memorable name (e.g., "My iPhone", "YubiKey")
-
-**Logging In with Passkeys:**
-
-1. On the login page, click the "Passkey" tab
-2. Enter your username
-3. Click "Login with Passkey"
-4. Use your authenticator (biometric, PIN, or security key)
-5. You'll be logged in instantly!
-
-**Managing Passkeys:**
-
-From the Passkeys page, you can:
-- View all your registered passkeys
-- Rename passkeys for easier identification
-- Delete passkeys you no longer use
-- See when each passkey was last used
-
-**Supported Authenticators:**
-- **Platform authenticators**: Built-in biometrics on your device
-  - Apple: Face ID, Touch ID (iPhone, iPad, Mac)
-  - Windows: Windows Hello (fingerprint, face recognition)
-  - Android: Fingerprint, face unlock
-- **Cross-platform authenticators**: USB security keys
-  - YubiKey 5 Series
-  - Google Titan Security Key
-  - Any FIDO2-compliant security key
-- **Browser support**: Chrome 108+, Safari 16+, Firefox 119+, Edge 108+
-
-**Security Notes:**
-- Passkeys use public-key cryptography - your biometric data never leaves your device
-- Each passkey is unique and bound to your domain
-- Passkeys cannot be stolen or phished like passwords
-- You can use both passkeys and passwords - they work together
 
 ### Creating a Site
 
