@@ -105,6 +105,25 @@ class Database:
                 )
             ''')
             
+            # Passkey credentials table
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS passkey_credentials (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    credential_id TEXT UNIQUE NOT NULL,
+                    public_key TEXT NOT NULL,
+                    sign_count INTEGER DEFAULT 0,
+                    transports TEXT,
+                    backup_eligible INTEGER DEFAULT 0,
+                    backup_state INTEGER DEFAULT 0,
+                    device_type TEXT,
+                    name TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    last_used_at TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+                )
+            ''')
+            
             # Initialize default settings if not exists
             cursor.execute('SELECT COUNT(*) FROM panel_settings WHERE setting_key = ?', ('panel_domain',))
             if cursor.fetchone()[0] == 0:
@@ -330,4 +349,57 @@ class Database:
                 # If conversion fails, log a warning and use the default
                 logger.warning(f"Invalid panel port value in database: '{db_port}'. Using default port {default_port}")
         return default_port
+    
+    # Passkey credential management methods
+    def create_passkey_credential(self, user_id, credential_id, public_key, sign_count=0, 
+                                   transports=None, backup_eligible=False, backup_state=False,
+                                   device_type=None, name=None):
+        """Create a new passkey credential"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                INSERT INTO passkey_credentials 
+                (user_id, credential_id, public_key, sign_count, transports, 
+                 backup_eligible, backup_state, device_type, name)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (user_id, credential_id, public_key, sign_count,
+                  transports, 1 if backup_eligible else 0, 1 if backup_state else 0,
+                  device_type, name))
+            return cursor.lastrowid
+    
+    def get_passkey_credential(self, credential_id):
+        """Get a passkey credential by credential_id"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM passkey_credentials WHERE credential_id = ?', (credential_id,))
+            return cursor.fetchone()
+    
+    def get_passkey_credentials_for_user(self, user_id):
+        """Get all passkey credentials for a user"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM passkey_credentials WHERE user_id = ? ORDER BY created_at DESC', (user_id,))
+            return cursor.fetchall()
+    
+    def update_passkey_sign_count(self, credential_id, sign_count):
+        """Update the sign count for a passkey credential"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('''
+                UPDATE passkey_credentials 
+                SET sign_count = ?, last_used_at = CURRENT_TIMESTAMP 
+                WHERE credential_id = ?
+            ''', (sign_count, credential_id))
+    
+    def delete_passkey_credential(self, credential_id):
+        """Delete a passkey credential"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('DELETE FROM passkey_credentials WHERE credential_id = ?', (credential_id,))
+    
+    def update_passkey_name(self, credential_id, name):
+        """Update the name of a passkey credential"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute('UPDATE passkey_credentials SET name = ? WHERE credential_id = ?', (name, credential_id))
 
